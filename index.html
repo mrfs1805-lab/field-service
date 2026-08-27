@@ -222,7 +222,6 @@ button:disabled {
     text-decoration: underline;
 }
 
-/* Modal Overlay Styles */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -253,7 +252,6 @@ button:disabled {
 <div class="container" id="loginBox">  
     <h2 style="text-align: center; color: #007bff; margin-top: 0;">MR Field Service</h2>  
     
-    <!-- Standard Login Form -->
     <div id="loginFormSection">
         <input id="username" placeholder="Username">  
         <div style="position: relative;">
@@ -265,7 +263,6 @@ button:disabled {
         <div id="loginStatus"></div>  
     </div>
 
-    <!-- Forgot Password Section (Initially Hidden) -->
     <div id="forgotPasswordSection" style="display:none; border-top:1px dashed #ccc; padding-top:10px; margin-top:10px;">
         <h4 style="margin: 0 0 10px 0; color: #6c757d; text-align: center;">Reset Password 🔑</h4>
         
@@ -491,7 +488,7 @@ let currentLogFilter = 'all';
 let currentEditingItemIdentifier = null;
 
 let REASONS = safeJSONParse(localStorage.getItem("REASONS"), [
-    "01. Use of Well Water [Drinking Only]",
+    "01. Meter rising",
     "02. Vacant Land",
     "03. Repeated Gate Closed",
     "04. System does not show Dc",
@@ -673,7 +670,7 @@ function resetLocalData(){
         localStorage.removeItem("QUEUE_" + username);
         localStorage.removeItem("lastEntry_" + username);
         localStorage.removeItem("PREFIXES_" + username);
-        localStorage.removeItem("sheetCount_" + username);
+        localStorage.removeItem("SHEET_COUNT_" + username);
     }
 
     alert("Local data reset successfully! ✅ Logging out now.");
@@ -785,11 +782,11 @@ function fetchUserLiveSheetData() {
 
             let today = getLocalDateString();
             let todaySheetData = LIVE_SHEET_DATA.filter(item => (item.date || "") === today);
-            REPORT_DATA.success = todaySheetData.length;
             
-            // FIX 1: Save today's sheet count into local storage & reset failure count dynamically
-            localStorage.setItem("sheetCount_" + user.username.toLowerCase(), todaySheetData.length);
-            REPORT_DATA.failed = QUEUE.length; // Pending / Failed count correctly synchronized
+            localStorage.setItem("SHEET_COUNT_" + user.username.toLowerCase(), todaySheetData.length);
+
+            REPORT_DATA.success = todaySheetData.length;
+            if (QUEUE.length === 0) REPORT_DATA.failed = 0;
             
             saveReport();
             updateStatistics();
@@ -1108,10 +1105,7 @@ function updateStatistics() {
     document.getElementById("totalCount").innerText = REPORT_DATA.total || 0;  
     let today = getLocalDateString();
     document.getElementById("successCount").innerText = LIVE_SHEET_DATA.filter(item => (item.date || "") === today).length; 
-    
-    // FIX 2: Ensure failed count always reflects actual pending queue state
-    if (QUEUE.length === 0) REPORT_DATA.failed = 0;
-    document.getElementById("failedCount").innerText = REPORT_DATA.failed || 0;  
+    document.getElementById("failedCount").innerText = (QUEUE.length === 0) ? 0 : (REPORT_DATA.failed || 0);  
     document.getElementById("pendingCount").innerText = QUEUE.length;  
 }  
 
@@ -1171,11 +1165,8 @@ function openEditModal(identifier) {
     }
 
     currentEditingItemIdentifier = identifier;
-    
-    // Set account number on top input
     document.getElementById("modalEditAccount").value = item.account || "";
     
-    // Populate reason dropdown with REASONS (Reason Management data)
     let reasonSel = document.getElementById("modalEditReason");
     reasonSel.innerHTML = `<option value="">Select Reason</option>`;
     REASONS.forEach(r => {
@@ -1183,7 +1174,6 @@ function openEditModal(identifier) {
         reasonSel.innerHTML += `<option value="${r}" ${selected}>${r}</option>`;
     });
 
-    // Show modal overlay
     document.getElementById("editModalOverlay").style.display = "flex";
 }
 
@@ -1228,7 +1218,6 @@ function saveModalEdit() {
     })
     .then(res => res.text())
     .then(() => {
-        // Update locally
         item.account = newAcc;
         item.reason = newReason;
         saveReport();
@@ -1383,7 +1372,7 @@ function checkLiveReset() {
         localStorage.setItem("QUEUE_" + username, JSON.stringify(QUEUE));
         localStorage.removeItem("lastEntry_" + username);
         localStorage.removeItem("PREFIXES_" + username);
-        localStorage.removeItem("sheetCount_" + username);
+        localStorage.removeItem("SHEET_COUNT_" + username);
 
         updateStatistics();  
         renderEntriesLog();
@@ -1415,13 +1404,15 @@ function isDuplicate(data){
     return isLocalSubmitted || isQueueDup || isLiveDup;
 }    
     
-function sendToServer(data){    
+function sendToServer(data, timeoutMs = 15000){    
     let queryString = new URLSearchParams(data).toString();
-    return fetch(DATA_URL + "?" + queryString)
-    .then(res => {
-        if(!res.ok) throw new Error("Server Error");
-        return res.json();
-    });
+    return Promise.race([
+        fetch(DATA_URL + "?" + queryString).then(res => {
+            if(!res.ok) throw new Error("Server Error");
+            return res.json();
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Network Timeout")), timeoutMs))
+    ]);
 }    
     
 async function syncQueue() {
@@ -1441,7 +1432,7 @@ async function syncQueue() {
     while (QUEUE.length > 0) {
         let currentItem = QUEUE[0];
         try {
-            let resData = await sendToServer(currentItem);
+            let resData = await sendToServer(currentItem, 10000);
             if(resData && resData.success) {
                 QUEUE.shift();
                 saveQueue();
@@ -1452,6 +1443,7 @@ async function syncQueue() {
                 renderEntriesLog();
             } else if(resData && resData.message && resData.message.includes("Duplicate")) {
                 QUEUE.shift();
+                if (REPORT_DATA.failed > 0) REPORT_DATA.failed--;
                 saveQueue();
             } else {
                 break;
@@ -1460,11 +1452,13 @@ async function syncQueue() {
             break; 
         }
     }
+
+    if (QUEUE.length === 0) {
+        REPORT_DATA.failed = 0;
+        saveReport();
+    }
     
     isSyncing = false;
-    REPORT_DATA.failed = QUEUE.length;
-    saveReport();
-    updateStatistics();
     setStatus("Sync completed ✅");
     fetchUserLiveSheetData();
 }
@@ -1489,30 +1483,18 @@ function submitForm(){
     
     if(account.replace(/\D/g, "").length !== 12){ setStatus("Invalid Account Format ❌"); return; }
     
+    // Fixed Data ID Logic (Prevents repeated date strings and produces DI8271, DI8272, etc.)
     let uName = current.username.trim();
     let userPrefix = uName.length >= 2 ? uName.substring(0, 2).toUpperCase() : uName.toUpperCase();
+
     let dateParts = date.split("-");
     let monthPart = parseInt(dateParts[1] || "1", 10);
     let dayPart = parseInt(dateParts[2] || "1", 10);
-    
-    // FIX 3: Robust Data ID generation from local cache to prevent delay & duplicate issues
-    let cachedSheetCount = parseInt(localStorage.getItem("sheetCount_" + current.username.toLowerCase()) || "0", 10);
-    let allTodayIds = [
-        ...LIVE_SHEET_DATA.filter(i => (i.date || "") === date).map(i => i.dataId || i.id),
-        ...SUBMITTED_LOG.filter(i => (i.date || "") === date).map(i => i.dataId),
-        ...QUEUE.filter(i => (i.date || "") === date).map(i => i.dataId)
-    ].filter(Boolean);
 
-    let maxSeq = cachedSheetCount;
-    allTodayIds.forEach(id => {
-        let match = (id || "").match(/\d+$/);
-        if (match) {
-            let num = parseInt(match[0], 10);
-            if (num > maxSeq) maxSeq = num;
-        }
-    });
+    let todaySheetCount = LIVE_SHEET_DATA.filter(item => (item.date || "") === date).length;
+    let localSubmittedCount = SUBMITTED_LOG.filter(item => (item.date || "") === date).length;
+    let userCountToday = Math.max(todaySheetCount, localSubmittedCount) + 1;
 
-    let userCountToday = maxSeq + 1;
     let dataId = `${userPrefix}${monthPart}${dayPart}${userCountToday}`;
 
     let data = { dataId, account, reason, date, assistant: current.username, timestamp: Date.now() };      
@@ -1524,7 +1506,6 @@ function submitForm(){
 
     if(!navigator.onLine){    
         REPORT_DATA.total++;
-        REPORT_DATA.failed++;
         SUBMITTED_LOG.push(data); 
         QUEUE.push(data);    
         saveQueue();    
@@ -1536,7 +1517,7 @@ function submitForm(){
     }      
 
     setStatus("Saving... ⏳");    
-    sendToServer(data)    
+    sendToServer(data, 15000)   
     .then((resData)=>{    
         if(resData && resData.success) {
             REPORT_DATA.total++;
@@ -1558,13 +1539,18 @@ function submitForm(){
     .catch(()=>{    
         REPORT_DATA.total++;
         REPORT_DATA.failed++;  
+        saveReport();  
         SUBMITTED_LOG.push(data);
         QUEUE.push(data);    
         saveQueue();    
-        saveReport();  
         setStatus("Saved Offline (Sync pending) 📥");    
         updateStatistics();  
         renderEntriesLog();
+
+        document.getElementById("account").value = "";    
+        document.getElementById("reason").value = "";    
+        document.getElementById("date").value = getLocalDateString();  
+        updateAccountPrefix();
     });    
 }    
 
