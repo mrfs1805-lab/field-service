@@ -487,7 +487,7 @@ button:disabled {
         <div class="toolbar">
             <div class="toolbar-group">
                 <label>R.A Name:</label>
-                <input type="text" id="raToolbarInput" value="" oninput="updateRaNameFromInput()" placeholder="Type name" style="width:140px;">
+                <input type="text" id="raToolbarInput" value="" oninput="raNameTouched=true;updateRaNameFromInput()" placeholder="Type name" style="width:140px;">
             </div>
 
             <div class="toolbar-group">
@@ -522,6 +522,7 @@ button:disabled {
                 <button id="redoBtn" onclick="redo()" disabled>↪️ Redo</button>
                 <button class="btn-success" onclick="saveDataToGoogleSheet()">☁️ Save</button>
                 <button class="btn-danger" onclick="clearTableData()">🗑️ Clear All</button>
+                <button class="btn-action" onclick="previewSummaryPDF()">👁️ Preview</button>
                 <button class="btn-pdf" onclick="downloadSummaryPDF()">📄 PDF</button>
             </div>
         </div>
@@ -545,7 +546,7 @@ button:disabled {
                 <div class="meta-row">
                     <div class="meta-left ra-name">
                         <span class="label">Revenue Assistant Name :</span>
-                        <input type="text" id="raName" placeholder="K.Dishanthan" oninput="syncRaToToolbar()">
+                        <input type="text" id="raName" placeholder="K.Dishanthan" oninput="raNameTouched=true;syncRaToToolbar()">
                     </div>
                 </div>
                 <div class="meta-row">
@@ -707,6 +708,7 @@ function switchTab(tabIndex) {
     } else if(tabIndex === 4) {
         document.getElementById('tab-summary').classList.add('active');
         document.getElementById('btn-tab-4').classList.add('active');
+        if (typeof autoFillRaName === 'function' && !document.getElementById('raName').value.trim()) autoFillRaName();
     }
 }
 
@@ -732,6 +734,7 @@ function login(){
             localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today }));   
             loadReasons(false);
             showApp();  
+            if (typeof autoFillRaName === 'function') autoFillRaName();
         } else {   
             document.getElementById("loginStatus").innerText = data.message || "Invalid Login ❌";   
         }   
@@ -960,7 +963,14 @@ function fetchUserLiveSheetData() {
                 FILTERED_SHEET_DATA = LIVE_SHEET_DATA.filter(item => {
                     let matchAccount = filterAccount ? (item.account || "").toLowerCase().includes(filterAccount) : true;
                     let matchReason = filterReason ? (item.reason || "").toLowerCase().includes(filterReason) : true;
-                    let matchDate = filterAccount ? true : (filterDate ? (item.date || "") === filterDate : true);
+
+                    let matchDate = true;
+                    if (filterAccount) {
+                        matchDate = true;
+                    } else if (filterDate) {
+                        matchDate = (item.date || "") === filterDate;
+                    }
+
                     return matchAccount && matchReason && matchDate;
                 });
             } else {
@@ -1452,20 +1462,49 @@ function renderDownloadTable() {
     });
 }
 
+// Account/reason/date search must also see today's entries that are saved on
+// this device but have not yet synced to the Google Sheet (e.g. due to a
+// temporary server error) - otherwise a just-submitted entry looks "missing"
+// even though it is safely queued and will sync automatically.
+function getSearchableRecords() {
+    let combined = [...LIVE_SHEET_DATA];
+    QUEUE.forEach(qItem => {
+        let qId = (qItem.dataId || "").trim();
+        let qAcc = (qItem.account || "").trim();
+        let alreadyIn = combined.some(item => {
+            let id = (item.dataId || item.id || "").trim();
+            let acc = (item.account || "").trim();
+            return (qId && id && qId === id) || (qAcc && acc && qAcc === acc);
+        });
+        if (!alreadyIn) combined.push(qItem);
+    });
+    return combined;
+}
+
 function applyMultiFilter() {
     let filterAccount = document.getElementById("filterAccount").value.trim().toLowerCase();
     let filterReason = document.getElementById("filterReason").value.trim().toLowerCase();
     let filterDate = document.getElementById("filterDate").value.trim();
+    let searchable = getSearchableRecords();
 
     if (!filterAccount && !filterReason && !filterDate) {
-        alert("Please enter or select at least one filter criterion! ❌");
+        let monthPrefix = getLocalDateString().slice(0, 7); // "YYYY-MM"
+        FILTERED_SHEET_DATA = searchable.filter(item => (item.date || "").startsWith(monthPrefix));
+        renderDownloadTable();
         return;
     }
 
-    FILTERED_SHEET_DATA = LIVE_SHEET_DATA.filter(item => {
+    FILTERED_SHEET_DATA = searchable.filter(item => {
         let matchAccount = filterAccount ? (item.account || "").toLowerCase().includes(filterAccount) : true;
         let matchReason = filterReason ? (item.reason || "").toLowerCase().includes(filterReason) : true;
-        let matchDate = filterAccount ? true : (filterDate ? (item.date || "") === filterDate : true);
+
+        let matchDate = true;
+        if (filterAccount) {
+            matchDate = true;
+        } else if (filterDate) {
+            matchDate = (item.date || "") === filterDate;
+        }
+
         return matchAccount && matchReason && matchDate;
     });
     renderDownloadTable();
@@ -1476,7 +1515,7 @@ function resetMultiFilter() {
     document.getElementById("filterReason").value = "";
     document.getElementById("filterDate").value = getLocalDateString();
     let today = getLocalDateString();
-    FILTERED_SHEET_DATA = LIVE_SHEET_DATA.filter(item => (item.date || "") === today);
+    FILTERED_SHEET_DATA = getSearchableRecords().filter(item => (item.date || "") === today);
     renderDownloadTable();
 }
 
@@ -1487,7 +1526,7 @@ function handleFilterInputClear() {
 
     if (!accVal && !reasonVal && !dateVal) {
         let today = getLocalDateString();
-        FILTERED_SHEET_DATA = LIVE_SHEET_DATA.filter(item => (item.date || "") === today);
+        FILTERED_SHEET_DATA = getSearchableRecords().filter(item => (item.date || "") === today);
         renderDownloadTable();
     }
 }
@@ -1553,11 +1592,13 @@ function checkLiveReset() {
         REPORT_DATA = { date: currentToday, total: 0, success: 0, failed: 0 };  
         SUBMITTED_LOG = [];
         LIVE_SHEET_DATA = [];
-        QUEUE = []; 
+        // QUEUE is intentionally NOT cleared here. Clearing it used to permanently
+        // delete any entry that had not yet synced to Google Sheets (e.g. because
+        // of a server error) with no record of what was lost. Unsynced entries now
+        // carry over to the next day and keep retrying until they succeed.
 
         localStorage.setItem("REPORT_DATA_" + username, JSON.stringify(REPORT_DATA));
         localStorage.setItem("SUBMITTED_LOG_" + username, JSON.stringify(SUBMITTED_LOG));
-        localStorage.setItem("QUEUE_" + username, JSON.stringify(QUEUE));
         localStorage.removeItem("lastEntry_" + username);
         localStorage.removeItem("PREFIXES_" + username);
         localStorage.removeItem("SHEET_COUNT_" + username);
@@ -1565,7 +1606,6 @@ function checkLiveReset() {
         updateStatistics();  
         renderEntriesLog();
         
-        alert("Daily Midnight Reset! All local log data reset for the new day. Please login again ⏰");  
         logout();   
     }  
 }  
@@ -1807,6 +1847,31 @@ function redo(){
  undoStack.push(currentState);restoreState(redoStack.pop());updateUndoRedoButtons();
 }
 function updateUndoRedoButtons(){document.getElementById('undoBtn').disabled=!undoStack.length;document.getElementById('redoBtn').disabled=!redoStack.length}
+let raNameTouched=false;
+function getLoginUsername(){
+ try{const u=JSON.parse(localStorage.getItem("currentUser"));return (u&&u.username)?String(u.username).trim():''}catch(e){return ''}
+}
+function setRaNameField(name){
+ document.getElementById('raName').value=name;
+ document.getElementById('raToolbarInput').value=name;
+}
+async function autoFillRaName(){
+ const loginUser=getLoginUsername();
+ if(!loginUser)return;
+ const cacheKey="RA_NAME_"+loginUser.toLowerCase();
+ // 1) instant fill from this device's cache
+ const cached=localStorage.getItem(cacheKey);
+ if(cached&&!raNameTouched&&!document.getElementById('raName').value.trim())setRaNameField(cached);
+ // 2) confirm with Google Sheet (name saved earlier under this login user)
+ try{
+  const res=await fetch(`${SUMMARY_WEB_APP_URL}?action=getRaName&loginUser=${encodeURIComponent(loginUser)}`);
+  const r=await res.json();
+  if(r.status==='success'&&r.raName){
+   localStorage.setItem(cacheKey,r.raName);
+   if(!raNameTouched)setRaNameField(r.raName);
+  }
+ }catch(err){console.warn('R.A name auto-fill failed:',err)}
+}
 function updateRaNameFromInput(){document.getElementById('raName').value=document.getElementById('raToolbarInput').value}
 function syncRaToToolbar(){document.getElementById('raToolbarInput').value=document.getElementById('raName').value}
 
@@ -1816,7 +1881,8 @@ function initSelectors(){
  monthNames.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m;if(i===now.getMonth())o.selected=true;ms.appendChild(o)});
  const cy=now.getFullYear();
  for(let y=cy-2;y<=cy+5;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===cy)o.selected=true;ys.appendChild(o)}
- for(let i=1;i<=31;i++){const s=i.toString().padStart(2,'0');let o=document.createElement('option');o.value=s;o.textContent=s;fs.appendChild(o);o=document.createElement('option');o.value=s;o.textContent=s;ts.appendChild(o)}
+ const todayDay=now.getDate().toString().padStart(2,'0');
+ for(let i=1;i<=31;i++){const s=i.toString().padStart(2,'0');let o=document.createElement('option');o.value=s;o.textContent=s;if(s===todayDay)o.selected=true;fs.appendChild(o);o=document.createElement('option');o.value=s;o.textContent=s;ts.appendChild(o)}
  updateBillingCycle();buildTableRows();loadRowDataToToolbar();
 }
 function loadRowDataToToolbar(){
@@ -1884,23 +1950,19 @@ function clearTableData(){
  document.querySelectorAll('#tableBody input').forEach(i=>i.value='');document.getElementById('totalBills').value='';loadRowDataToToolbar();alert('All data cleared.');
 }
 
-async function downloadSummaryPDF(){
+async function buildSummaryExportCanvas(){
  const source=document.getElementById('pdfContent');
  const raName=document.getElementById('raName').value.trim()||'Summary';
  const monthKey=getMonthKey();
- showLoading(true);
+
+ if(typeof window.html2canvas!=='function'){
+  throw new Error('html2canvas library did not load. Please check internet connection.');
+ }
 
  let exportPage=null;
  let exportStyle=null;
 
  try{
-  if(typeof window.html2canvas!=='function'){
-   throw new Error('html2canvas library did not load. Please check internet connection.');
-  }
-  if(!window.jspdf || typeof window.jspdf.jsPDF!=='function'){
-   throw new Error('jsPDF library did not load. Please check internet connection.');
-  }
-
   /*
    * IMPORTANT:
    * The Monthly Summary is displayed inside the mobile 500px app container.
@@ -1928,6 +1990,37 @@ async function downloadSummaryPDF(){
     dst.value=src.value;
     dst.setAttribute('value',src.value);
    }
+  });
+
+  /*
+   * PDF text fix (meta fields):
+   * The same html2canvas input-rendering issue described below also
+   * affects the Billing Cycle Period, Revenue Assistant Name and
+   * Contract Number fields (outside the table). Convert them to text
+   * spans in the PDF clone only; the live form remains unchanged.
+   */
+  const metaInputs=exportPage.querySelectorAll('.meta-block input');
+  metaInputs.forEach(input=>{
+   const span=document.createElement('span');
+   span.textContent=input.value || '';
+   span.style.display='inline-block';
+   span.style.fontFamily="'Times New Roman', Times, serif";
+   span.style.fontSize='10.5pt';
+   span.style.color='#000';
+   span.style.borderBottom='1px solid #000';
+   span.style.padding='1px 3px';
+   span.style.whiteSpace='nowrap';
+
+   if(input.id==='periodFrom' || input.id==='periodTo'){
+    span.style.width='70px';
+    span.style.textAlign='center';
+   }else if(input.id==='raName'){
+    span.style.width='160px';
+   }else if(input.id==='contractNo'){
+    span.style.width='420px';
+   }
+
+   if(input.parentNode) input.parentNode.replaceChild(span,input);
   });
 
   /*
@@ -2162,6 +2255,23 @@ async function downloadSummaryPDF(){
    windowHeight:Math.ceil(exportPage.getBoundingClientRect().height)
   });
 
+  return {canvas, raName, monthKey};
+
+ }finally{
+  if(exportPage && exportPage.parentNode) exportPage.parentNode.removeChild(exportPage);
+  if(exportStyle && exportStyle.parentNode) exportStyle.parentNode.removeChild(exportStyle);
+ }
+}
+
+async function downloadSummaryPDF(){
+ showLoading(true);
+ try{
+  if(!window.jspdf || typeof window.jspdf.jsPDF!=='function'){
+   throw new Error('jsPDF library did not load. Please check internet connection.');
+  }
+
+  const {canvas, raName, monthKey}=await buildSummaryExportCanvas();
+
   const imgData=canvas.toDataURL('image/jpeg',0.98);
   const PDF=window.jspdf.jsPDF;
   const pdf=new PDF({
@@ -2183,19 +2293,56 @@ async function downloadSummaryPDF(){
  }catch(err){
   alert('Error generating PDF: '+(err&&err.message?err.message:err));
  }finally{
-  if(exportPage && exportPage.parentNode) exportPage.parentNode.removeChild(exportPage);
-  if(exportStyle && exportStyle.parentNode) exportStyle.parentNode.removeChild(exportStyle);
   showLoading(false);
  }
+}
+
+async function previewSummaryPDF(){
+ showLoading(true);
+ try{
+  const {canvas}=await buildSummaryExportCanvas();
+  const imgData=canvas.toDataURL('image/jpeg',0.98);
+  showPdfPreviewModal(imgData);
+ }catch(err){
+  alert('Error generating preview: '+(err&&err.message?err.message:err));
+ }finally{
+  showLoading(false);
+ }
+}
+
+function showPdfPreviewModal(imgData){
+ let modal=document.getElementById('pdfPreviewModal');
+ if(modal) modal.remove();
+
+ modal=document.createElement('div');
+ modal.id='pdfPreviewModal';
+ modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:16px;';
+ modal.innerHTML=`
+   <div style="background:#fff;padding:6px;border-radius:6px;max-width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+     <img src="${imgData}" style="max-width:100%;display:block;" alt="PDF Preview">
+   </div>
+   <div style="margin-top:14px;display:flex;gap:10px;padding-bottom:20px;">
+     <button id="pdfPreviewCloseBtn" style="padding:10px 18px;border:none;border-radius:5px;background:#6c757d;color:#fff;font-weight:bold;">✖️ Close</button>
+     <button id="pdfPreviewDownloadBtn" style="padding:10px 18px;border:none;border-radius:5px;background:#17a2b8;color:#fff;font-weight:bold;">📄 Download PDF</button>
+   </div>
+ `;
+
+ document.body.appendChild(modal);
+ document.getElementById('pdfPreviewCloseBtn').onclick=function(){ modal.remove(); };
+ document.getElementById('pdfPreviewDownloadBtn').onclick=function(){
+  modal.remove();
+  downloadSummaryPDF();
+ };
 }
 async function saveDataToGoogleSheet(){
  const raName=document.getElementById('raName').value.trim();if(!raName){alert('Please enter the Revenue Assistant Name!');document.getElementById('raName').focus();return}
  showLoading(true);const tableData=[];
  document.querySelectorAll('#tableBody tr').forEach(tr=>{const i=tr.querySelectorAll('input');tableData.push({sno:tr.getAttribute('data-sno'),date:i[0].value,area:i[1].value,order:i[2].value,qty:i[3].value})});
- const payload={action:"save",raName,monthKey:getMonthKey(),data:{billingPeriod:`${document.getElementById('periodFrom').value} - ${document.getElementById('periodTo').value}`,contractNo:document.getElementById('contractNo').value,totalQty:document.getElementById('totalBills').value,tableData}};
+ const loginUser=getLoginUsername();
+ const payload={action:"save",raName,loginUser,monthKey:getMonthKey(),data:{billingPeriod:`${document.getElementById('periodFrom').value} - ${document.getElementById('periodTo').value}`,contractNo:document.getElementById('contractNo').value,totalQty:document.getElementById('totalBills').value,tableData}};
  try{
   const response=await fetch(SUMMARY_WEB_APP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}),result=await response.json();showLoading(false);
-  if(result.status==='success')alert(`Data for ${raName} saved successfully to Google Sheets!`);else alert('Error: '+result.message);
+  if(result.status==='success'){if(loginUser)localStorage.setItem('RA_NAME_'+loginUser.toLowerCase(),raName);alert(`Data for ${raName} saved successfully to Google Sheets!`)}else alert('Error: '+result.message);
  }catch(err){showLoading(false);alert('Error saving data: '+err.message)}
 }
 
@@ -2217,6 +2364,7 @@ async function fetchDataFromGoogleSheet(){
 }
 
 initSelectors();
+autoFillRaName();
 </script>
 </body>  
 </html>
