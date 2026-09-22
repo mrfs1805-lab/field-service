@@ -1,156 +1,2370 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>டெலிவரி லொகேஷன்</title>
-  <style>
-    body { font-family: Arial, "Noto Sans Tamil", sans-serif; max-width: 480px; margin: 20px auto; padding: 0 16px; color: #222; }
-    h2 { text-align: center; }
-    label { display: block; margin-top: 14px; font-weight: bold; }
-    input[type=text] { width: 100%; padding: 10px; margin-top: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
-    button { width: 100%; padding: 12px; margin-top: 14px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
-    #captureBtn { background: #1a73e8; color: #fff; }
-    #submitBtn { background: #188038; color: #fff; }
-    #locStatus { margin-top: 8px; font-size: 14px; color: #555; }
-    iframe { width: 100%; height: 300px; border: 0; border-radius: 8px; margin-top: 14px; }
-    .error { color: #c5221f; font-size: 14px; margin-top: 8px; }
-    #statusLine { margin-top: 10px; font-size: 14px; text-align: center; padding: 8px; border-radius: 6px; background: #f1f3f4; }
-    .hidden { display: none; }
-  </style>
-</head>
-<body>
-  <h2>டெலிவரி லொகேஷன்</h2>
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>MR Field Service</title>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>  
+body{  
+    font-family: Arial, sans-serif;  
+    background:#1e1e24; 
+    margin:0;  
+    display:flex;  
+    justify-content:center;  
+    align-items:center;  
+    min-height:100vh;  
+}  
+  
+.container{  
+    width:95%;  
+    max-width:500px;  
+    background:white;  
+    padding:20px;  
+    border-radius:16px;  
+    box-shadow:0 10px 30px rgba(0,0,0,0.3);  
+    margin-bottom: 110px; 
+    box-sizing: border-box;
+}  
+  
+input, select, button{  
+    width:100%;  
+    padding:12px;  
+    margin:6px 0;  
+    border-radius:6px;  
+    border:1px solid #ccc;  
+    box-sizing: border-box;
+}  
 
-  <!--
-    🔧 SETUP: Google Cloud Console -> "Maps Embed API"-ஐ Enable செய்து
-    பெறும் API Key-ஐ கீழே MAPS_EMBED_API_KEY இடத்தில் ஒட்டவும் (இலவசம்).
-    இந்த கோப்பை GitHub Pages / Netlify போன்ற ஒரு HTTPS தளத்தில்
-    host செய்யவும் - அப்போதுதான் Location பட்டன் வேலை செய்யும்.
-  -->
-  <script>
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycby8-AVGi0EG4nTClxuCTKlGwRVLudYDzGmbJbiqcZ_zcmMg3iw_mFvK_Fzt_EPYY88M/exec";
-    const MAPS_EMBED_API_KEY = "PASTE_YOUR_MAPS_EMBED_API_KEY_HERE";
-  </script>
+button{  
+    background:#007bff;  
+    color:white;  
+    border:none;  
+    cursor:pointer;  
+    font-weight: bold;
+}  
 
-  <div id="formBlock">
-    <label for="name">பெயர் (Name)</label>
-    <input type="text" id="name" placeholder="உங்கள் பெயர்">
+button:disabled {
+    background: #cccccc !important;
+    color: #666666 !important;
+    cursor: not-allowed;
+}  
+  
+.logoutBtn{background:#dc3545; margin-top: 10px;}  
+.resetBtn{background:#ffc107; color:#000; margin-top: 20px; font-weight: bold;}
+.downloadBtn{background:#28a745; margin-top:8px;}  
+.refreshBtn{background:#17a2b8; margin-top:6px; margin-bottom:10px;}
+  
+.smallBox{  
+    border:1px solid #ddd;  
+    padding:10px; 
+    margin-top:10px;  
+    border-radius:8px;  
+    background: #fdfdfd;
+}  
 
-    <label for="address">முகவரி (Address)</label>
-    <input type="text" id="address" placeholder="முழு முகவரி">
+.smallBox h3 {
+    font-size: 15px; 
+    margin: 5px 0;
+}  
+  
+#status,#loginStatus,#fpStatus{  
+    text-align:center;  
+    font-weight:bold;  
+    margin-top: 10px;
+    padding: 6px;
+    border-radius: 4px;
+}  
 
-    <button id="captureBtn" onclick="captureLocation()">📍 லைவ் லொகேஷன் பிடி</button>
-    <div id="locStatus"></div>
+.dashboardBox{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px; 
+    margin-top:10px;
+}
 
-    <iframe id="myMap" class="hidden"></iframe>
+.statCard{
+    background:#f8f8f8;
+    border:1px solid #ddd;
+    padding:8px; 
+    border-radius:6px;
+    text-align:center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
-    <button id="submitBtn" onclick="submitForm()" disabled>சமர்ப்பி (Submit)</button>
-    <div id="formError" class="error"></div>
-  </div>
+.statCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
 
-  <div id="statusLine" class="hidden"></div>
+.statCard.active-filter {
+    border: 2px solid #007bff;
+    background: #e7f1ff;
+}
 
-  <script>
-    let lat = null, lng = null, submissionId = null, pollTimer = null;
+.statCard h4{
+    margin:3px 0;
+    font-size:11px; 
+}
 
-    function embedMap(elId, la, ln, label) {
-      const el = document.getElementById(elId);
-      el.classList.remove('hidden');
-      el.src = 'https://www.google.com/maps/embed/v1/view?key=' +
-        encodeURIComponent(MAPS_EMBED_API_KEY) + '&center=' + la + ',' + ln + '&zoom=16';
+.statCard span{
+    font-size:16px; 
+    font-weight:bold;
+}
+
+.compact-btn {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    margin: 4px 0 !important;
+    border-radius: 4px !important;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 5px; 
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 460px;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 5px;
+    border-radius: 30px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    z-index: 999;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 6px;
+    margin: 0;
+    width: auto;
+    transition: color 0.3s;
+}
+
+.nav-item svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.nav-item.active {
+    color: #007bff; 
+}
+
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+
+.data-table-container {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.data-table th, .data-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.data-table th {
+    background-color: #007bff;
+    color: white;
+    position: sticky;
+    top: 0;
+}
+.filter-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.prefix-container {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+.prefix-container input {
+    text-align: center;
+    font-weight: bold;
+    background-color: #f8f9fa;
+    padding: 6px 8px !important;
+    font-size: 13px !important;
+}
+
+.forgot-link {
+    text-align: right;
+    display: block;
+    font-size: 12px;
+    color: #007bff;
+    cursor: pointer;
+    margin: 4px 0 10px 0;
+    text-decoration: underline;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    box-sizing: border-box;
+}
+
+/* ===== Monthly Summary Tab (scoped so it never affects the other tabs) ===== */
+#tab-summary *{box-sizing:border-box}
+#tab-summary{font-family:'Times New Roman',Times,serif}
+#tab-summary .toolbar{position:relative;background:#2c3e50;padding:10px;border-radius:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+#tab-summary .toolbar-group{display:flex;align-items:center;gap:6px;background:#fff;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;flex-wrap:wrap}
+#tab-summary .toolbar label{font-weight:bold;font-size:9pt;color:#1e293b;font-family:'Times New Roman',Times,serif;white-space:nowrap}
+#tab-summary .toolbar select,#tab-summary .toolbar input,#tab-summary .toolbar button{width:auto;padding:4px 6px;margin:0;font-size:9pt;border:1px solid #cbd5e1;border-radius:4px;font-family:'Times New Roman',Times,serif}
+#tab-summary .toolbar button{padding:6px 10px;font-size:9pt;border:none;border-radius:4px;cursor:pointer;background:#3498db;color:#fff;font-weight:bold}
+#tab-summary .toolbar button.btn-success{background-color:#2e7d32}
+#tab-summary .toolbar button.btn-danger{background-color:#c53030}
+#tab-summary .toolbar button.btn-warning{background-color:#d69e2e;color:#fff}
+#tab-summary .toolbar button.btn-action{background-color:#2b6cb0}
+#tab-summary .toolbar button.btn-pdf{background-color:#d97706}
+#tab-summary .toolbar button:disabled{background-color:#94a3b8;cursor:not-allowed;opacity:.6}
+#summaryLoadingOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);z-index:10000;justify-content:center;align-items:center;color:#fff;font-size:14pt;font-weight:bold}
+#tab-summary .page{width:100%;max-width:210mm;min-height:auto;margin:0 auto;background:#fff;padding:10px;box-shadow:0 0 6px rgba(0,0,0,.2);overflow-x:auto;border-radius:8px}
+#tab-summary .company-header{text-align:center;margin-bottom:10px}
+#tab-summary .company-header .cname{font-size:13pt;font-weight:bold}
+#tab-summary .company-header .addr,#tab-summary .company-header .tel{font-size:9.5pt}
+#tab-summary .meta-block{margin-top:10px;margin-bottom:8px;font-size:9.5pt}
+#tab-summary .meta-row{display:flex;justify-content:space-between;margin-bottom:4px;gap:10px;flex-wrap:wrap}
+#tab-summary .meta-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#tab-summary .meta-block input{width:auto;font-family:inherit;font-size:9.5pt;border:none;border-bottom:1px solid #000;padding:1px 3px;margin:0;background:transparent;border-radius:0}
+#tab-summary .billing-period input{width:60px;text-align:center}
+#tab-summary .ra-name input{width:140px}
+#tab-summary .contract-no input{width:100%;max-width:320px}
+#tab-summary table.sierra-table{width:100%;border-collapse:collapse;margin-top:6px;table-layout:fixed}
+#tab-summary table.sierra-table th,#tab-summary table.sierra-table td{border:1px solid #000;padding:0 2px;font-size:9.5pt;text-align:center;color:#000;height:22px;vertical-align:middle}
+#tab-summary table.sierra-table th{font-weight:bold;background:#f2f2f2;vertical-align:middle}
+#tab-summary table.sierra-table th.col-serial,#tab-summary table.sierra-table td.serial{width:6%}
+#tab-summary table.sierra-table th.col-date,#tab-summary table.sierra-table td.date{width:11%}
+#tab-summary table.sierra-table th.col-area,#tab-summary table.sierra-table td.area{width:45%}
+#tab-summary table.sierra-table th.col-workorder,#tab-summary table.sierra-table td.workorder{width:24%;white-space:nowrap;overflow:hidden;text-overflow:clip}
+#tab-summary table.sierra-table th.col-qty,#tab-summary table.sierra-table td.qty{width:14%}
+#tab-summary table.sierra-table input{width:100%;height:100%;border:none;text-align:center;font-family:inherit;font-size:9.5pt;color:#000;font-weight:bold;background:transparent;padding:0;outline:none;line-height:20px}
+#tab-summary table.sierra-table input:focus{background:#fffbcc}
+#tab-summary table.sierra-table td.area input,#tab-summary table.sierra-table td.workorder input{text-align:left!important;padding-left:4px}
+#tab-summary .total-row-tr td.total-label{text-align:right;font-weight:bold;font-size:9pt;padding-right:6px}
+#tab-summary .total-row-tr input{font-weight:bold}
+#tab-summary .signatures{display:flex;justify-content:space-between;margin-top:40px;font-size:9pt;flex-wrap:wrap}
+#tab-summary .sig-box{width:30%;text-align:center}
+#tab-summary .sig-line{border-top:1px solid #000;margin-bottom:3px}
+@media print{
+ #tab-summary .toolbar{display:none!important}
+ #tab-summary .page{box-shadow:none;margin:0;width:auto;min-height:auto}
+ @page{size:A4;margin:10mm 12mm}
+ #tab-summary input{border-bottom:1px solid #000!important}
+ #tab-summary table.sierra-table input{border:none!important}
+}
+</style>  
+</head>  
+<body>  
+
+<!-- Login Box -->
+<div class="container" id="loginBox">  
+    <h2 style="text-align: center; color: #007bff; margin-top: 0;">MR Field Service</h2>  
+    
+    <div id="loginFormSection">
+        <input id="username" placeholder="Username">  
+        <div style="position: relative;">
+            <input id="password" type="password" placeholder="Password">  
+            <span onclick="togglePasswordVisibility('password')" style="position: absolute; right: 12px; top: 15px; cursor: pointer; user-select: none; font-size: 15px;">👁️</span>
+        </div>
+        <span class="forgot-link" onclick="toggleForgotPassword(true)">Forgot Password? 🔑</span>
+        <button onclick="login()">Login</button>  
+        <div id="loginStatus"></div>  
+    </div>
+
+    <div id="forgotPasswordSection" style="display:none; border-top:1px dashed #ccc; padding-top:10px; margin-top:10px;">
+        <h4 style="margin: 0 0 10px 0; color: #6c757d; text-align: center;">Reset Password 🔑</h4>
+        
+        <input id="fp_username" placeholder="User Name">
+        <input id="fp_mobile" placeholder="Mobile Number" inputmode="numeric">
+        
+        <div id="fpVerifySection">
+            <button onclick="verifyUserMobile()" style="background:#17a2b8;">Verify Account 🔍</button>
+        </div>
+
+        <div id="fpNewPasswordSection" style="display:none;">
+            <div style="position: relative;">
+                <input id="fp_new_password" type="password" placeholder="Enter New Password">
+                <span onclick="togglePasswordVisibility('fp_new_password')" style="position: absolute; right: 12px; top: 15px; cursor: pointer; user-select: none;">👁️</span>
+            </div>
+            <button onclick="resetPasswordAction()" style="background:#28a745;">Save New Password 💾</button>
+        </div>
+
+        <span class="forgot-link" style="text-align:center; margin-top:10px;" onclick="toggleForgotPassword(false)">Back to Login 🔙</span>
+        <div id="fpStatus"></div>
+    </div>
+</div>  
+
+<!-- App Box -->
+<div class="container" id="appBox" style="display:none;">  
+    <div id="tab-data-enter" class="tab-content active">
+        <div id="userInfo" style="margin-bottom: 5px; font-size: 14px; color: #555;"></div>  
+        <span id="userLiveStatus" style="font-size:11px; color:#28a745; font-weight:bold; display:block; margin-bottom:10px; background:#e7f5ea; padding:4px 8px; border-radius:4px; border:1px solid #c3e6cb;">🟢 Live Check Active</span>
+        
+        <h2 style="margin-top: 0;">Data Entry 🏠</h2>
+        
+        <label style="font-size: 12px; font-weight: bold; color: #555;">Account Number Prefix (57 / 09 / 301):</label>
+        <div class="prefix-container">
+            <input id="prefix1" placeholder="57" maxlength="2" inputmode="numeric">
+            <input id="prefix2" placeholder="09" maxlength="2" inputmode="numeric">
+            <input id="prefix3" placeholder="301" maxlength="3" inputmode="numeric">
+        </div>
+
+        <input id="account" placeholder="57/09/301/001/10" inputmode="numeric">  
+        <select id="reason"></select>  
+        <button class="refreshBtn compact-btn" onclick="loadReasons(true)">Refresh Reasons 🔄</button>
+        
+        <input type="date" id="date">  
+        <select id="assistant"></select>  
+        <button onclick="submitForm()">Submit</button>  
+        <div id="status"></div>  
+
+        <div class="smallBox">
+            <h3>User Report</h3>
+            <div class="dashboardBox">
+                <div class="statCard active-filter" id="card-all" onclick="filterLogByStatus('all')">
+                    <h4>Total Submitted</h4>
+                    <span id="totalCount">0</span>
+                </div>
+                <div class="statCard" id="card-success" onclick="filterLogByStatus('success')">
+                    <h4>Google Sheet Sent</h4>
+                    <span id="successCount">0</span>
+                </div>
+                <div class="statCard" id="card-pending" onclick="filterLogByStatus('pending')">
+                    <h4>Pending</h4>
+                    <span id="pendingCount">0</span>
+                </div>
+                <div class="statCard" id="card-failed" onclick="filterLogByStatus('failed')">
+                    <h4>Failed</h4>
+                    <span id="failedCount">0</span>
+                </div>
+            </div>
+            
+            <button class="downloadBtn compact-btn" style="background:#ffc107; color:black;" onclick="syncQueue()">Retry / Sync Pending & Failed Data 🔄</button>
+            <button id="manualRequestBtn" class="downloadBtn compact-btn" style="background:#fd7e14; color:white;" onclick="sendDataMismatchRequest(false)">Send Pending / Failure Request Manual ✉️</button>
+            <button class="downloadBtn compact-btn" style="background:#28a745;" onclick="downloadPDF()">Download Today's Data (PDF) 📄</button>  
+            
+            <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:8px;">
+                <h4 style="margin:4px 0; font-size:12px;" id="entriesLogTitle">Today's Entries Log (All):</h4>
+                <div id="entriesLogList" style="max-height:160px; overflow-y:auto; font-size:12px; color:#555; background:#f9f9f9; padding:5px; border-radius:4px;">
+                    No entries made yet.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab-content">
+        <h2 style="margin-top: 0; color: #6c757d;">Settings ⚙️</h2>
+        
+        <div id="userRequestContainer" style="background:#e9ecef; padding:12px; border-radius:8px; margin-bottom:15px;">
+            <h4 style="margin:0 0 5px 0; color:#007bff;">+ Request New Reason to Admin</h4>
+            <input id="userRequestedReason" placeholder="Type new reason here...">
+            <button id="sendRequestBtn" class="compact-btn" onclick="submitReasonRequest()" style="background:#6c757d; color:white; margin: 4px 0 0 0;">Send Request ✉️</button>
+        </div>
+
+        <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px;">
+            <h4 style="margin: 0 0 10px 0; color: #28a745;">Change Password 🔑</h4>
+            <div style="position: relative;">
+                <input id="oldPassword" type="password" placeholder="Current (Old) Password">
+                <span onclick="togglePasswordVisibility('oldPassword')" style="position: absolute; right: 12px; top: 15px; cursor: pointer; user-select: none;">👁️</span>
+            </div>
+            <div style="position: relative;">
+                <input id="newPassword" type="password" placeholder="New Password">
+                <span onclick="togglePasswordVisibility('newPassword')" style="position: absolute; right: 12px; top: 15px; cursor: pointer; user-select: none;">👁️</span>
+            </div>
+            <div style="position: relative;">
+                <input id="confirmPassword" type="password" placeholder="Confirm New Password">
+                <span onclick="togglePasswordVisibility('confirmPassword')" style="position: absolute; right: 12px; top: 15px; cursor: pointer; user-select: none;">👁️</span>
+            </div>
+            <button id="changePassBtn" onclick="submitPasswordChange()" style="background:#28a745; margin-top: 8px;">Update Password</button>
+        </div>
+
+        <button class="resetBtn" onclick="resetLocalData()">Reset Local Data 🔄</button>  
+        <button class="logoutBtn" onclick="logout()">Logout Account 🚪</button>  
+    </div>
+
+    <!-- Download Tab -->
+    <div id="tab-download" class="tab-content">
+        <h2 style="margin-top: 0; color: #28a745;">Download Data 📥</h2>
+        
+        <div style="background:#f4f6f9; padding:12px; border-radius:8px; border:1px solid #ccd0d5;">
+            <label style="font-size:12px; font-weight:bold; color:#333; display:block; margin-bottom:5px;">Filter Data By:</label>
+            
+            <div class="filter-grid">
+                <input id="filterAccount" placeholder="Filter by Account Number..." oninput="handleFilterInputClear()">
+                
+                <select id="filterReason" onchange="handleFilterInputClear()">
+                    <option value="">All Reasons</option>
+                </select>
+                
+                <input type="date" id="filterDate" onchange="handleFilterInputClear()">
+
+                <div style="display:flex; gap:6px; margin-top:4px;">
+                    <button onclick="applyMultiFilter()" class="compact-btn" style="background:#007bff; flex:1;">Filter 🔍</button>
+                    <button onclick="resetMultiFilter()" class="compact-btn" style="background:#6c757d; flex:1;">Reset 🔄</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="smallBox" style="margin-top:15px;">
+            <h3 style="color:#007bff; display:flex; justify-content:space-between; align-items:center;">
+                <span>📊 Submissions</span>
+                <span id="downloadTabCount" style="font-size:12px; background:#007bff; color:white; padding:2px 8px; border-radius:10px;">0 Records</span>
+            </h3>
+
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data ID</th>
+                            <th>Account Number</th>
+                            <th>Reason</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="downloadTableBody">
+                        <tr>
+                            <td colspan="4" style="text-align:center;">No Filter Applied</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="downloadBtn compact-btn" style="background:#28a745; margin-top:12px;" onclick="downloadFilteredPDF()">Download PDF 📄</button>
+            <button class="downloadBtn compact-btn" style="background:#17a2b8;" onclick="downloadFilteredCSV()">Download CSV (Excel) 📊</button>
+        </div>
+    </div>
+
+    <!-- Monthly Summary Tab (NEW) -->
+    <div id="tab-summary" class="tab-content">
+        <h2 style="margin-top: 0; color:#2c3e50;">Monthly Summary 📊</h2>
+
+        <div id="summaryLoadingOverlay">⏳ Processing...</div>
+
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <label>R.A Name:</label>
+                <input type="text" id="raToolbarInput" value="" oninput="raNameTouched=true;updateRaNameFromInput()" placeholder="Type name" style="width:140px;">
+            </div>
+
+            <div class="toolbar-group">
+                <label>Month/Year:</label>
+                <select id="monthSelect" onchange="updateBillingCycle()"></select>
+                <select id="yearSelect" onchange="updateBillingCycle()"></select>
+                <button class="btn-action" onclick="fetchDataFromGoogleSheet()">📥 Fetch</button>
+            </div>
+
+            <div class="toolbar-group" style="background-color:#f1f5f9;border:1px solid #94a3b8;">
+                <label style="color:#0f172a;">From S.NO:</label>
+                <select id="fromSnoSelect" onchange="loadRowDataToToolbar()"></select>
+                <label>Area:</label>
+                <input type="text" id="tbArea" placeholder="Area" style="width:100px;" onfocus="saveStateOnFocus()">
+                <label>Work Order:</label>
+                <input type="text" id="tbOrder" placeholder="Work Order No" style="width:120px;" onfocus="saveStateOnFocus()">
+                <label>Qty:</label>
+                <input type="text" id="tbQty" placeholder="Qty" style="width:50px;text-align:center;" onfocus="saveStateOnFocus()" onkeypress="handleKeyPress(event)">
+                <button class="btn-success" onclick="addRowData()">➕ Add</button>
+                <button class="btn-warning" onclick="clearSelectedRow()">🗑️ Clear</button>
+            </div>
+
+            <div class="toolbar-group">
+                <label>To S.NO:</label>
+                <select id="toSnoSelect"></select>
+                <button class="btn-action" onclick="copyRowData()">📋 Copy</button>
+                <button class="btn-action" onclick="moveRowData()">✂️ Move</button>
+            </div>
+
+            <div class="toolbar-group">
+                <button id="undoBtn" onclick="undo()" disabled>↩️ Undo</button>
+                <button id="redoBtn" onclick="redo()" disabled>↪️ Redo</button>
+                <button class="btn-success" onclick="saveDataToGoogleSheet()">☁️ Save</button>
+                <button class="btn-danger" onclick="clearTableData()">🗑️ Clear All</button>
+                <button class="btn-action" onclick="previewSummaryPDF()">👁️ Preview</button>
+                <button class="btn-pdf" onclick="downloadSummaryPDF()">📄 PDF</button>
+            </div>
+        </div>
+
+        <div class="page" id="pdfContent">
+            <div class="company-header">
+                <div class="cname">Sierra Engineering and Construction (Pvt) Ltd</div>
+                <div class="addr">No.23, Havelock Road, Colombo 05</div>
+                <div class="tel">Tele: 0112 584681/0710 486980</div>
+            </div>
+
+            <div class="meta-block">
+                <div class="meta-row">
+                    <div class="meta-left billing-period">
+                        <span class="label">Billing Cycle Period From :</span>
+                        <input type="text" id="periodFrom" placeholder="01 Jun">
+                        <span>-</span>
+                        <input type="text" id="periodTo" placeholder="30 Jun">
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-left ra-name">
+                        <span class="label">Revenue Assistant Name :</span>
+                        <input type="text" id="raName" placeholder="K.Dishanthan" oninput="raNameTouched=true;syncRaToToolbar()">
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-left contract-no">
+                        <span class="label">Contract number :</span>
+                        <input type="text" id="contractNo" value="RSC(E)/DGM/O&amp;M/METER-READING/BATTI/2024/11">
+                    </div>
+                </div>
+            </div>
+
+            <table class="sierra-table" id="dataTable">
+                <thead><tr>
+                    <th class="col-serial">Serial NO</th>
+                    <th class="col-date">Date of Reading</th>
+                    <th class="col-area">Area</th>
+                    <th class="col-workorder">Work order<br>Number/Ac NO</th>
+                    <th class="col-qty">No of Reading Complete Qty</th>
+                </tr></thead>
+                <tbody id="tableBody"></tbody>
+                <tfoot><tr class="total-row-tr">
+                    <td colspan="4" class="total-label">Total Number of bills Submitted :</td>
+                    <td class="qty"><input type="text" id="totalBills"></td>
+                </tr></tfoot>
+            </table>
+
+            <div class="signatures">
+                <div class="sig-box"><div class="sig-line"></div>R.A Signature</div>
+                <div class="sig-box"><div class="sig-line"></div>M.R.I Signature</div>
+                <div class="sig-box"><div class="sig-line"></div>O.I.C Signature</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-nav" id="bottomNavBar">
+        <button class="nav-item active" onclick="switchTab(1)" id="btn-tab-1">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </button>
+        <button class="nav-item" onclick="switchTab(3)" id="btn-tab-3" title="Download Data">
+            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        </button>
+        <button class="nav-item" onclick="switchTab(4)" id="btn-tab-4" title="Monthly Summary">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </button>
+        <button class="nav-item" onclick="switchTab(2)" id="btn-tab-2">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0-.43-.17-.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6-3.6z"/></svg>
+        </button>
+    </div>
+</div>  
+
+<!-- Edit Modal Popup -->
+<div class="modal-overlay" id="editModalOverlay">
+    <div class="modal-card">
+        <h3 style="margin-top:0; color:#007bff; text-align:center;">Edit Entry ✏️</h3>
+        
+        <label style="font-size: 12px; font-weight: bold; color: #555; display: block; margin-top: 5px;">Account Number (Top):</label>
+        <input id="modalEditAccount" placeholder="57/09/301/001/10" inputmode="numeric" maxlength="16" autocomplete="off">
+        
+        <label style="font-size: 12px; font-weight: bold; color: #555; display: block; margin-top: 10px;">Reason (Bottom):</label>
+        <select id="modalEditReason"></select>
+
+        <div style="display:flex; gap:8px; margin-top:15px;">
+            <button onclick="saveModalEdit()" style="background:#28a745; flex:1;">Save & Request 💾</button>
+            <button onclick="closeEditModal()" style="background:#dc3545; flex:1;">Cancel ❌</button>
+        </div>
+    </div>
+</div>
+
+<script> 
+const DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
+const ADMIN_DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
+const REASONS_URL = "https://script.google.com/macros/s/AKfycbyTlh5n5yzPy9i3HnvJxnWfddexCz33rRitPQntBfJ4YfaJVLHNLiRgOmmqeSJ6xo75qQ/exec";
+const USER_MANAGEMENT_URL = "https://script.google.com/macros/s/AKfycbwhktmEgW_3CFN203f3n2IEjGLgQnQR_ZxbC_PrricRfePspfwNGfiv5KS7dEO5ut1t/exec";
+const REQUESTS_URL = "https://script.google.com/macros/s/AKfycbyu-CjSxeNmLLKnS1qAbV8R3ZuG94pEnlFhtSbSk0YOW-6zJBerVTlDe44bENChKZcmyQ/exec";
+
+function safeJSONParse(str, fallback) {
+    try {
+        return str ? JSON.parse(str) : fallback;
+    } catch (e) {
+        return fallback;
+    }
+}
+  
+let REPORT_DATA = { date: "", total: 0, success: 0, failed: 0 };  
+let QUEUE = [];    
+let SUBMITTED_LOG = [];
+let LIVE_SHEET_DATA = [];
+let FILTERED_SHEET_DATA = [];
+let CURRENT_PENDING_REQUESTS = []; 
+let isSyncing = false;   
+let isAutoSending = false;
+let isResetting = false;
+let userAutoRequestInterval = null;
+let currentLogFilter = 'all';
+let currentEditingItemIdentifier = null;
+
+let REASONS = safeJSONParse(localStorage.getItem("REASONS"), [
+    "01. Meter rising",
+    "02. Vacant Land",
+    "03. Repeated Gate Closed",
+    "04. System does not show Dc",
+    "05. New Connection",
+    "06. Reconnection"
+]);
+
+function getLocalDateString() {
+    let d = new Date();
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    let year = d.getFullYear();
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+    return [year, month, day].join('-');
+}
+
+function getTimeString() {
+    return new Date().toLocaleTimeString();
+}
+
+function saveReasons(){
+    localStorage.setItem("REASONS", JSON.stringify(REASONS));
+}
+
+function togglePasswordVisibility(id) {
+    let x = document.getElementById(id);
+    if (x.type === "password") x.type = "text";
+    else x.type = "password";
+}
+
+function toggleForgotPassword(show) {
+    document.getElementById("loginFormSection").style.display = show ? "none" : "block";
+    document.getElementById("forgotPasswordSection").style.display = show ? "block" : "none";
+    document.getElementById("fpStatus").innerText = "";
+}
+
+function setFpStatus(msg, isSuccess) {
+    let el = document.getElementById("fpStatus");
+    if(el) {
+        el.innerText = msg;
+        el.style.background = isSuccess ? "#d4edda" : "#f8d7da";
+        el.style.color = isSuccess ? "#155724" : "#721c24";
+    }
+}
+
+function switchTab(tabIndex) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    
+    if(tabIndex === 1) {
+        document.getElementById('tab-data-enter').classList.add('active');
+        document.getElementById('btn-tab-1').classList.add('active');
+    } else if(tabIndex === 2) {
+        document.getElementById('tab-settings').classList.add('active');
+        document.getElementById('btn-tab-2').classList.add('active');
+    } else if(tabIndex === 3) {
+        document.getElementById('tab-download').classList.add('active');
+        document.getElementById('btn-tab-3').classList.add('active');
+        renderDownloadTable();
+    } else if(tabIndex === 4) {
+        document.getElementById('tab-summary').classList.add('active');
+        document.getElementById('btn-tab-4').classList.add('active');
+        if (typeof autoFillRaName === 'function' && !document.getElementById('raName').value.trim()) autoFillRaName();
+    }
+}
+
+function login(){  
+    let u = document.getElementById("username").value.trim();  
+    let p = document.getElementById("password").value.trim();  
+    if(!u || !p){  
+        document.getElementById("loginStatus").innerText = "Enter username and password ❌";  
+        return;  
+    }  
+    document.getElementById("loginStatus").innerText = "Checking... ⏳";  
+    
+    fetch(USER_MANAGEMENT_URL, { 
+        method: "POST", 
+        body: JSON.stringify({ action: "checkLogin", username: u, password: p }) 
+    })  
+    .then(res => res.json())  
+    .then(data => {
+        let isSuccess = data && (data.status === "success" || data.success === true || data.success === "true");
+
+        if(isSuccess) {   
+            let today = getLocalDateString();  
+            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today }));   
+            loadReasons(false);
+            showApp();  
+            if (typeof autoFillRaName === 'function') autoFillRaName();
+        } else {   
+            document.getElementById("loginStatus").innerText = data.message || "Invalid Login ❌";   
+        }   
+    })  
+    .catch(() => {   
+        document.getElementById("loginStatus").innerText = "Connection Error (Offline Login) ⚠️";
+        let cachedUser = safeJSONParse(localStorage.getItem("currentUser"), null);
+        if(cachedUser && cachedUser.username && cachedUser.username.toLowerCase() === u.toLowerCase()) {
+            showApp();
+        }
+    });  
+}  
+
+function verifyUserMobile() {
+    let username = document.getElementById("fp_username").value.trim();
+    let mobile = document.getElementById("fp_mobile").value.trim();
+
+    if(!username || !mobile) {
+        setFpStatus("Please enter Username and Mobile Number! ❌", false);
+        return;
     }
 
-    function captureLocation() {
-      const status = document.getElementById('locStatus');
-      const btn = document.getElementById('captureBtn');
-      if (!navigator.geolocation) {
-        status.textContent = 'இந்த சாதனத்தில் லொகேஷன் ஆதரிக்கப்படவில்லை.';
+    setFpStatus("Verifying... ⏳", true);
+
+    fetch(USER_MANAGEMENT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "verifyUser", username: username, mobile: mobile })
+    })
+    .then(res => res.json())
+    .then(result => {
+        if(result.status === "success") {
+            setFpStatus("Verified! Enter new password. ✅", true);
+            document.getElementById("fpVerifySection").style.display = "none";
+            document.getElementById("fpNewPasswordSection").style.display = "block";
+        } else {
+            setFpStatus("Invalid Username or Mobile Number! ❌", false);
+        }
+    })
+    .catch(() => {
+        setFpStatus("Error verifying user details! ❌", false);
+    });
+}
+
+function resetPasswordAction() {
+    let username = document.getElementById("fp_username").value.trim();
+    let newPassword = document.getElementById("fp_new_password").value.trim();
+
+    if(!newPassword) {
+        setFpStatus("Please enter a new password! ❌", false);
         return;
-      }
-      status.textContent = 'லொகேஷன் தேடப்படுகிறது...';
-      btn.disabled = true;
-      navigator.geolocation.getCurrentPosition(function (pos) {
-        lat = pos.coords.latitude;
-        lng = pos.coords.longitude;
-        status.textContent = '✅ லொகேஷன் கிடைத்தது (' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ')';
-        btn.disabled = false;
-        embedMap('myMap', lat, lng);
-        document.getElementById('submitBtn').disabled = false;
-      }, function (err) {
-        status.textContent = '❌ லொகேஷன் பெற முடியவில்லை: ' + err.message;
-        btn.disabled = false;
-      }, { enableHighAccuracy: true, timeout: 15000 });
     }
 
-    function submitForm() {
-      const name = document.getElementById('name').value.trim();
-      const address = document.getElementById('address').value.trim();
-      const errorEl = document.getElementById('formError');
-      errorEl.textContent = '';
+    setFpStatus("Saving new password... ⏳", true);
 
-      if (!name || !address) {
-        errorEl.textContent = 'பெயர் மற்றும் முகவரியை நிரப்பவும்.';
-        return;
-      }
-      if (!lat || !lng) {
-        errorEl.textContent = 'முதலில் லொகேஷனை கேப்சர் செய்யவும்.';
-        return;
-      }
+    fetch(USER_MANAGEMENT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "resetPassword", username: username, newPassword: newPassword })
+    })
+    .then(res => res.json())
+    .then(result => {
+        if(result.status === "success") {
+            alert("New password saved successfully! Please login. ✅");
+            toggleForgotPassword(false);
+            document.getElementById("fp_username").value = "";
+            document.getElementById("fp_mobile").value = "";
+            document.getElementById("fp_new_password").value = "";
+            document.getElementById("fpVerifySection").style.display = "block";
+            document.getElementById("fpNewPasswordSection").style.display = "none";
+        } else {
+            setFpStatus(result.message || "Error resetting password! ❌", false);
+        }
+    })
+    .catch(() => {
+        setFpStatus("Error saving new password! ❌", false);
+    });
+}
 
-      submissionId = 'S' + Date.now() + Math.floor(Math.random() * 1000);
-      const submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'சமர்ப்பிக்கிறது...';
+function logout(){  
+    if(userAutoRequestInterval) clearInterval(userAutoRequestInterval);
+    localStorage.removeItem("currentUser");  
+    localStorage.removeItem("REASONS");
+    location.reload();  
+}  
 
-      fetch(WEBAPP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ id: submissionId, name: name, address: address, lat: lat, lng: lng })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-          if (!res.success) {
-            errorEl.textContent = 'பிழை: ' + (res.error || 'சமர்ப்பிப்பு தோல்வியடைந்தது');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'சமர்ப்பி (Submit)';
-            return;
-          }
-          document.getElementById('name').disabled = true;
-          document.getElementById('address').disabled = true;
-          document.getElementById('captureBtn').disabled = true;
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'சமர்ப்பிக்கப்பட்டது ✅';
-          const statusLine = document.getElementById('statusLine');
-          statusLine.classList.remove('hidden');
-          statusLine.textContent = 'அட்மின் உறுதி செய்ய காத்திருக்கிறது... (Pending)';
-          pollTimer = setInterval(pollLiveLocation, 8000);
-          pollLiveLocation();
-        })
-        .catch(function (err) {
-          errorEl.textContent = 'நெட்வொர்க் பிழை: ' + err.message;
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'சமர்ப்பி (Submit)';
+function resetLocalData(){
+    let confirmReset = confirm("Are you sure you want to reset all local data? Pending offline entries will be lost! ⚠️");
+    if(!confirmReset) return;
+
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if(user && user.username) {
+        let username = user.username.toLowerCase();
+        localStorage.removeItem("REPORT_DATA_" + username);
+        localStorage.removeItem("SUBMITTED_LOG_" + username);
+        localStorage.removeItem("QUEUE_" + username);
+        localStorage.removeItem("lastEntry_" + username);
+        localStorage.removeItem("PREFIXES_" + username);
+        localStorage.removeItem("SHEET_COUNT_" + username);
+    }
+
+    alert("Local data reset successfully! ✅ Logging out now.");
+    logout();
+}
+
+function savePrefixes() {
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if (user && user.username) {
+        let username = user.username.toLowerCase();
+        let prefixes = {
+            p1: document.getElementById("prefix1").value,
+            p2: document.getElementById("prefix2").value,
+            p3: document.getElementById("prefix3").value
+        };
+        localStorage.setItem("PREFIXES_" + username, JSON.stringify(prefixes));
+    }
+}
+
+function loadPrefixes() {
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if (user && user.username) {
+        let username = user.username.toLowerCase();
+        let stored = safeJSONParse(localStorage.getItem("PREFIXES_" + username), null);
+        if (stored) {
+            document.getElementById("prefix1").value = stored.p1 || "";
+            document.getElementById("prefix2").value = stored.p2 || "";
+            document.getElementById("prefix3").value = stored.p3 || "";
+            updateAccountPrefix();
+        }
+    }
+}
+
+function showApp(){  
+    document.getElementById("loginBox").style.display="none";  
+    document.getElementById("appBox").style.display="block";  
+    let user = safeJSONParse(localStorage.getItem("currentUser"), {username: 'User', role: 'User'});  
+    let username = user.username ? user.username.toLowerCase() : 'user';  
+    document.getElementById("userInfo").innerHTML = `Logged in as <b>${user.username}</b> (${user.role})`;  
+    
+    loadAssistants();  
+    renderReasonsDropdown();         
+
+    let todayStr = getLocalDateString();  
+    document.getElementById("date").value = todayStr;  
+    document.getElementById("filterDate").value = todayStr;  
+    
+    REPORT_DATA = safeJSONParse(localStorage.getItem("REPORT_DATA_" + username), {  
+        date: todayStr,  
+        total: 0,  
+        success: 0,  
+        failed: 0  
+    });  
+    QUEUE = safeJSONParse(localStorage.getItem("QUEUE_" + username), []);  
+    SUBMITTED_LOG = safeJSONParse(localStorage.getItem("SUBMITTED_LOG_" + username), []);
+    
+    loadPrefixes();
+    checkLiveReset();
+    fetchUserLiveSheetData(); 
+
+    if (!userAutoRequestInterval) {
+        userAutoRequestInterval = setInterval(() => {
+            sendDataMismatchRequest(true);
+        }, 30000); 
+    }
+
+    switchTab(1); 
+}  
+
+function fetchUserLiveSheetData() {
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if(!user || !user.username) return Promise.resolve();
+    
+    let liveStatusEl = document.getElementById("userLiveStatus");
+    if(liveStatusEl) liveStatusEl.innerText = "🟡 Checking...";
+
+    return fetch(ADMIN_DATA_URL)
+    .then(res => { if(!res.ok) throw new Error("Server Error"); return res.text(); })
+    .then(text => {
+        let data = safeJSONParse(text, null);
+        if(data && Array.isArray(data.records)) {
+            let rawRecords = data.records.filter(item => 
+                (item.assistant || item.user || "").toLowerCase() === user.username.toLowerCase()
+            );
+
+            let seenKeys = new Set();
+            LIVE_SHEET_DATA = [];
+            rawRecords.forEach(item => {
+                let dId = (item.dataId || item.id || "").trim();
+                let acc = (item.account || "").trim();
+                let key = dId || acc;
+                if (key && !seenKeys.has(key)) {
+                    seenKeys.add(key);
+                    LIVE_SHEET_DATA.push(item);
+                }
+            });
+
+            let initialQueueLen = QUEUE.length;
+            QUEUE = QUEUE.filter(qItem => {
+                let qId = (qItem.dataId || "").trim();
+                let qAcc = (qItem.account || "").trim();
+                return !LIVE_SHEET_DATA.some(lItem => {
+                    let lId = (lItem.dataId || lItem.id || "").trim();
+                    let lAcc = (lItem.account || "").trim();
+                    return (qId && lId && qId === lId) || (qAcc && lAcc && qAcc === lAcc);
+                });
+            });
+            if (QUEUE.length !== initialQueueLen) saveQueue();
+
+            let today = getLocalDateString();
+            let todaySheetData = LIVE_SHEET_DATA.filter(item => (item.date || "") === today);
+            
+            localStorage.setItem("SHEET_COUNT_" + user.username.toLowerCase(), todaySheetData.length);
+
+            REPORT_DATA.success = todaySheetData.length;
+            if (QUEUE.length === 0) REPORT_DATA.failed = 0;
+            
+            saveReport();
+            updateStatistics();
+            renderEntriesLog();
+
+            if(liveStatusEl) liveStatusEl.innerText = `🟢 Live Verified: ${getTimeString()}`;
+
+            let filterAccount = document.getElementById("filterAccount") ? document.getElementById("filterAccount").value.trim().toLowerCase() : "";
+            let filterReason = document.getElementById("filterReason") ? document.getElementById("filterReason").value.trim().toLowerCase() : "";
+            let filterDate = document.getElementById("filterDate") ? document.getElementById("filterDate").value.trim() : "";
+
+            if (filterAccount || filterReason || filterDate) {
+                FILTERED_SHEET_DATA = LIVE_SHEET_DATA.filter(item => {
+                    let matchAccount = filterAccount ? (item.account || "").toLowerCase().includes(filterAccount) : true;
+                    let matchReason = filterReason ? (item.reason || "").toLowerCase().includes(filterReason) : true;
+
+                    let matchDate = true;
+                    if (filterAccount) {
+                        matchDate = true;
+                    } else if (filterDate) {
+                        matchDate = (item.date || "") === filterDate;
+                    }
+
+                    return matchAccount && matchReason && matchDate;
+                });
+            } else {
+                FILTERED_SHEET_DATA = [...todaySheetData];
+            }
+            renderDownloadTable();
+        }
+    })
+    .catch(() => {
+        if(liveStatusEl) liveStatusEl.innerText = "🔴 Live Check Failed (Offline)";
+    });
+}
+  
+function loadAssistants(){  
+    let sel = document.getElementById("assistant");  
+    let current = safeJSONParse(localStorage.getItem("currentUser"), {username: 'User'});  
+    sel.innerHTML = `<option>${current.username}</option>`;  
+}  
+
+// ACCOUNT NUMBER FORMATTER — ONE STANDARD FOR ALL ACCOUNT FIELDS
+// Exactly 12 digits, automatically displayed as 2/2/3/3/2.
+function formatAccountNumber(value) {
+    const digits = String(value || "").replace(/\D/g, "").substring(0, 12);
+    const sizes = [2, 2, 3, 3, 2];
+    const parts = [];
+    let index = 0;
+    for (let i = 0; i < sizes.length; i++) {
+        if (digits.length > index) {
+            parts.push(digits.substring(index, index + sizes[i]));
+            index += sizes[i];
+        }
+    }
+    return parts.join("/");
+}
+
+function formatAccountField(e) {
+    e.target.value = formatAccountNumber(e.target.value);
+}
+
+document.getElementById("account").addEventListener("input", formatAccountField);
+
+// Edit Entry Account Number — same automatic 2/2/3/3/2 formatting
+const modalEditAccountInput = document.getElementById("modalEditAccount");
+if (modalEditAccountInput) {
+    modalEditAccountInput.addEventListener("input", formatAccountField);
+    modalEditAccountInput.addEventListener("paste", function() {
+        setTimeout(() => {
+            this.value = formatAccountNumber(this.value);
+        }, 0);
+    });
+}
+
+function updateAccountPrefix() {
+    let p1 = document.getElementById("prefix1").value.replace(/\D/g, "");
+    let p2 = document.getElementById("prefix2").value.replace(/\D/g, "");
+    let p3 = document.getElementById("prefix3").value.replace(/\D/g, "");
+
+    let accountInput = document.getElementById("account");
+    let currentVal = accountInput.value.replace(/\D/g, "");
+
+    let prefixDigits = (p1 + p2 + p3).substring(0, 7);
+    let remainingLength = 12 - prefixDigits.length;
+    let remainingVal = currentVal.substring(prefixDigits.length, prefixDigits.length + remainingLength);
+    
+    let fullDigits = prefixDigits + remainingVal;
+    let sizes = [2, 2, 3, 3, 2];
+    let index = 0;
+    let parts = [];
+    for (let i = 0; i < sizes.length; i++) {
+        if (fullDigits.length > index) {
+            parts.push(fullDigits.substring(index, index + sizes[i]));
+            index += sizes[i];
+        }
+    }
+    accountInput.value = parts.join("/");
+}
+
+['prefix1', 'prefix2', 'prefix3'].forEach(id => {
+    let elem = document.getElementById(id);
+    if(elem) {
+        elem.addEventListener("input", function() {
+            updateAccountPrefix();
+            savePrefixes(); 
+            if (this.value.length >= this.maxLength) {
+                if (id === 'prefix1') document.getElementById('prefix2').focus();
+                else if (id === 'prefix2') document.getElementById('prefix3').focus();
+                else if (id === 'prefix3') document.getElementById('account').focus();
+            }
         });
     }
+});
 
-    function pollLiveLocation() {
-      if (!submissionId) return;
-      fetch(WEBAPP_URL + '?action=liveLocation&id=' + encodeURIComponent(submissionId))
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-          const statusLine = document.getElementById('statusLine');
-          if (res.status === 'Pending') {
-            statusLine.textContent = 'அட்மின் உறுதி செய்ய காத்திருக்கிறது... (Pending)';
-          } else if (res.status === 'Approved') {
-            statusLine.textContent = 'ஆர்டர் உறுதி செய்யப்பட்டது - டிரைவர் இன்னும் புறப்படவில்லை...';
-          } else if (res.status === 'In Progress' && res.lat && res.lng) {
-            statusLine.textContent = '🟢 டிரைவர் வழியில் இருக்கிறார் (கடைசி புதுப்பிப்பு: ' + res.updatedAt + ')';
-            embedMap('myMap', res.lat, res.lng);
-          }
-        })
-        .catch(function () { /* silent retry on next poll */ });
+function sendDataMismatchRequest(isSilent = false) {
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if (!user || !user.username) {
+        if (!isSilent) setStatus("Please login again ❌");
+        return;
     }
-  </script>
-</body>
+
+    let manualBtn = document.getElementById("manualRequestBtn");
+    let statusElem = document.getElementById("userLiveStatus");
+
+    if (isAutoSending && !isSilent) {
+        setStatus("Sync/Request in progress... ⏳");
+        return;
+    }
+
+    if (!isSilent && manualBtn) { 
+        manualBtn.disabled = true; 
+        manualBtn.innerText = "Requesting Admin... ⏳"; 
+    }
+    
+    if (!isSilent) setStatus("Checking mismatch data... ⏳");
+    isAutoSending = true;
+
+    fetchUserLiveSheetData().then(() => {
+        let today = getLocalDateString();
+
+        fetch(REQUESTS_URL + "?action=getRequests")
+        .then(res => res.text())
+        .then(text => {
+            let data = safeJSONParse(text, null);
+            CURRENT_PENDING_REQUESTS = (data && Array.isArray(data.requests)) ? data.requests : [];
+            
+            let requestsToSend = [];
+            let checkedDataIds = new Set();
+
+            let allLocalEntries = [...SUBMITTED_LOG, ...QUEUE];
+
+            allLocalEntries.forEach(item => {
+                let dId = (item.dataId || "").trim();
+                let acc = (item.account || "").trim();
+
+                if (!dId && !acc) return;
+
+                let uniqueKey = dId || acc;
+                if (checkedDataIds.has(uniqueKey)) return;
+                checkedDataIds.add(uniqueKey);
+
+                let existsInSheet = LIVE_SHEET_DATA.some(l => {
+                    let lId = (l.dataId || l.id || "").trim();
+                    let lAcc = (l.account || "").trim();
+                    return (dId && lId && dId === lId) || (acc && lAcc && acc === lAcc);
+                });
+
+                let isCurrentlyPendingAtAdmin = CURRENT_PENDING_REQUESTS.some(r => {
+                    let reqText = (r.requestedReason || r.reason || r.request || "").toString();
+                    let reqUser = (r.username || r.user || "").toString().toLowerCase();
+                    let matchesUser = reqUser === user.username.toLowerCase();
+                    let matchesId = dId ? reqText.includes(dId) : reqText.includes(acc);
+                    return matchesUser && matchesId;
+                });
+
+                if (!existsInSheet && !isCurrentlyPendingAtAdmin) {
+                    requestsToSend.push(`[DATA_ENTRY]|ID:${dId || 'N/A'}|ACC:${acc}|REASON:${item.reason || ''}|DATE:${item.date || today}|TYPE:Mismatch`);
+                }
+            });
+
+            if (requestsToSend.length === 0) {
+                if (statusElem) statusElem.innerText = `🟢 Live Verified: ${getTimeString()}`;
+                if (!isSilent) setStatus("No mismatch data found 🟢");
+                resetManualBtnState(manualBtn);
+                isAutoSending = false;
+                return;
+            }
+
+            Promise.all(requestsToSend.map(reqStr => fetch(REQUESTS_URL, {
+                method: "POST",
+                body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: reqStr })
+            }))).then(() => {
+                let msg = `${requestsToSend.length} Mismatch requests sent to Admin ✉️✅`;
+                if (statusElem) statusElem.innerText = `🟢 ${msg} (${getTimeString()})`;
+                if (!isSilent) {
+                    alert(msg);
+                    setStatus(msg);
+                }
+            }).catch(() => {
+                if (!isSilent) setStatus("Request failed ❌");
+            }).finally(() => { 
+                resetManualBtnState(manualBtn); 
+                isAutoSending = false; 
+            });
+        }).catch(() => { 
+            resetManualBtnState(manualBtn); 
+            isAutoSending = false; 
+        });
+    });
+}
+
+function resetManualBtnState(btn) {
+    if (btn) { btn.disabled = false; btn.innerText = "Send Pending / Failure Request Manual ✉️"; }
+}
+
+function submitPasswordChange() {
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if(!user || !user.username) return;
+
+    let oldPass = document.getElementById("oldPassword").value.trim();
+    let newPass = document.getElementById("newPassword").value.trim();
+    let confirmPass = document.getElementById("confirmPassword").value.trim();
+    
+    if(!oldPass || !newPass || !confirmPass) { alert("Please fill all fields! ❌"); return; }
+    if(newPass.length < 4) { alert("New password must be at least 4 characters! ❌"); return; }
+    if(newPass !== confirmPass) { alert("Passwords do not match! ❌"); return; }
+
+    let btn = document.getElementById("changePassBtn");
+    btn.disabled = true;
+    btn.innerText = "Updating... ⏳";
+    
+    fetch(USER_MANAGEMENT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "changePassword", username: user.username, oldPassword: oldPass, newPassword: newPass })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data && data.status === "success") {
+            alert("Password changed successfully! ✅ Please login again.");
+            logout();
+        } else {
+            alert(data ? (data.message || "Failed to change password") : "Failed to change password");
+        }
+    })
+    .catch(() => alert("Failed to change password. Error! ❌"))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerText = "Update Password";
+        document.getElementById("oldPassword").value = "";
+        document.getElementById("newPassword").value = "";
+        document.getElementById("confirmPassword").value = "";
+    });
+}
+
+function submitReasonRequest() {
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if(!user || !user.username) return;
+
+    let reqInput = document.getElementById("userRequestedReason");
+    let reqReason = reqInput.value.trim();
+    if(!reqReason) { alert("Please enter a reason! ❌"); return; }
+    
+    let sendBtn = document.getElementById("sendRequestBtn");
+    sendBtn.disabled = true;
+    sendBtn.innerText = "Sending... ⏳";
+    
+    fetch(REQUESTS_URL, {
+        method: "POST",
+        body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: reqReason })
+    })
+    .then(() => {
+        alert("Request sent successfully to Admin! ✉️✅");
+        reqInput.value = ""; 
+    })
+    .catch(() => alert("Failed to send request. ❌"))
+    .finally(() => {
+        sendBtn.disabled = false;
+        sendBtn.innerText = "Send Request";
+    });
+}
+
+function loadReasons(showAlert = false){  
+    if(showAlert) setStatus("Refreshing reasons... ⏳");
+
+    fetch(REASONS_URL + "?action=getReasons")  
+    .then(res => res.text())  
+    .then(text => {  
+        let data = safeJSONParse(text, null);
+        if(data && Array.isArray(data.reasons) && data.reasons.length > 0) {  
+            REASONS = data.reasons;  
+            saveReasons();  
+            renderReasonsDropdown();
+            if(showAlert) setStatus(`Reasons updated successfully! ✅`);
+        } else {
+            if(showAlert) setStatus("Failed to fetch new reasons ❌");
+        }
+    }).catch(() => { 
+        if(showAlert) setStatus("Network error! ⚠️"); 
+    });  
+}
+
+function renderReasonsDropdown() {  
+    let sel = document.getElementById("reason");  
+    let filterSel = document.getElementById("filterReason");
+    if(!sel || !filterSel) return;
+
+    sel.innerHTML = `<option value="">Select Reason</option>`;  
+    filterSel.innerHTML = `<option value="">All Reasons</option>`; 
+    REASONS.forEach(r=>{ 
+        sel.innerHTML += `<option value="${r}">${r}</option>`; 
+        filterSel.innerHTML += `<option value="${r}">${r}</option>`;
+    });  
+}  
+
+function saveReport() {  
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);  
+    if (user && user.username) {
+        let username = user.username.toLowerCase();
+        localStorage.setItem("REPORT_DATA_" + username, JSON.stringify(REPORT_DATA));  
+        localStorage.setItem("SUBMITTED_LOG_" + username, JSON.stringify(SUBMITTED_LOG));
+    }
+}  
+
+function saveQueue(){   
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);  
+    if (user && user.username) localStorage.setItem("QUEUE_" + user.username.toLowerCase(), JSON.stringify(QUEUE));   
+}    
+
+function setStatus(msg){ 
+    let el = document.getElementById("status");
+    if(el) {
+        el.innerText = msg;
+        el.style.background = msg.includes("✅") ? "#d4edda" : msg.includes("❌") ? "#f8d7da" : "#e2e3e5";
+        el.style.color = msg.includes("✅") ? "#155724" : msg.includes("❌") ? "#721c24" : "#383d41";
+    }
+}    
+
+function updateStatistics() {  
+    document.getElementById("totalCount").innerText = REPORT_DATA.total || 0;  
+    let today = getLocalDateString();
+    document.getElementById("successCount").innerText = LIVE_SHEET_DATA.filter(item => (item.date || "") === today).length; 
+    document.getElementById("failedCount").innerText = (QUEUE.length === 0) ? 0 : (REPORT_DATA.failed || 0);  
+    document.getElementById("pendingCount").innerText = QUEUE.length;  
+}  
+
+function filterLogByStatus(status) {
+    currentLogFilter = status;
+    document.querySelectorAll('.statCard').forEach(card => card.classList.remove('active-filter'));
+    document.getElementById('card-' + status).classList.add('active-filter');
+    renderEntriesLog();
+}
+
+function renderEntriesLog() {
+    let logBox = document.getElementById("entriesLogList");
+    if(!logBox) return;
+
+    let itemsToDisplay = currentLogFilter === 'pending' || currentLogFilter === 'failed' ? QUEUE : 
+                         currentLogFilter === 'success' ? LIVE_SHEET_DATA.filter(i => i.date === getLocalDateString()) : SUBMITTED_LOG;
+
+    if (itemsToDisplay.length === 0) { logBox.innerHTML = "No entries found."; return; }
+
+    logBox.innerHTML = "";
+    [...itemsToDisplay].reverse().forEach(item => {
+        let itemId = item.dataId || item.id || '';
+        let itemAcc = item.account || '';
+        let searchKey = itemId || itemAcc;
+
+        let inSheet = LIVE_SHEET_DATA.some(l => {
+            let lId = (l.dataId || l.id || "").trim();
+            let lAcc = (l.account || "").trim();
+            return (itemId && lId && lId === itemId) || (itemAcc && lAcc && lAcc === itemAcc);
+        });
+
+        let statusBadge = inSheet 
+            ? `<span style="color:#28a745; font-weight:bold; font-size:10px;">🟢 In Sheet</span>`
+            : `<span style="color:#dc3545; font-weight:bold; font-size:10px;">🔴 Pending</span>`;
+
+        let editBtn = `<button onclick="openEditModal('${searchKey}')" class="compact-btn" style="background:#ffc107; color:black; padding:2px 6px !important; font-size:10px !important; margin:2px 0 0 0;">Edit 🖊️</button>`;
+
+        logBox.innerHTML += `<div style="padding:6px 0; border-bottom:1px dashed #ddd;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <b>ID: ${itemId || 'N/A'}</b>
+                <div>
+                    ${statusBadge}
+                    ${editBtn}
+                </div>
+            </div>
+            <b>Acc: ${itemAcc}</b><br>
+            <span style="font-size:11px; color:#666;">${item.reason || ''}</span>
+        </div>`;
+    });
+}
+
+function openEditModal(identifier) {
+    let item = SUBMITTED_LOG.find(i => (i.dataId || '').trim() === identifier || (i.account || '').trim() === identifier);
+    if (!item) {
+        alert("Entry not found in local logs! ❌");
+        return;
+    }
+
+    currentEditingItemIdentifier = identifier;
+    const modalAccountInput = document.getElementById("modalEditAccount");
+    modalAccountInput.value = formatAccountNumber(item.account || "");
+    
+    let reasonSel = document.getElementById("modalEditReason");
+    reasonSel.innerHTML = `<option value="">Select Reason</option>`;
+    REASONS.forEach(r => {
+        let selected = (r === item.reason) ? "selected" : "";
+        reasonSel.innerHTML += `<option value="${r}" ${selected}>${r}</option>`;
+    });
+
+    document.getElementById("editModalOverlay").style.display = "flex";
+}
+
+function closeEditModal() {
+    document.getElementById("editModalOverlay").style.display = "none";
+    currentEditingItemIdentifier = null;
+}
+
+function saveModalEdit() {
+    const accountInput = document.getElementById("modalEditAccount");
+    const newAcc = formatAccountNumber(accountInput.value);
+    accountInput.value = newAcc;
+
+    let newReason = document.getElementById("modalEditReason").value.trim();
+
+    if (!newAcc) {
+        alert("Account number cannot be empty! ❌");
+        accountInput.focus();
+        return;
+    }
+
+    const newAccDigits = newAcc.replace(/\D/g, "");
+    if (newAccDigits.length !== 12 || !/^\d{2}\/\d{2}\/\d{3}\/\d{3}\/\d{2}$/.test(newAcc)) {
+        alert("Account Number must contain exactly 12 digits in this format: 2/2/3/3/2\nExample: 57/09/301/001/10 ❌");
+        accountInput.focus();
+        return;
+    }
+
+    if (!newReason) {
+        alert("Please select a reason from the list! ❌");
+        return;
+    }
+
+    let item = SUBMITTED_LOG.find(i => (i.dataId || '').trim() === currentEditingItemIdentifier || (i.account || '').trim() === currentEditingItemIdentifier);
+    if (!item) {
+        alert("Error finding item! ❌");
+        closeEditModal();
+        return;
+    }
+
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if (!user || !user.username) {
+        alert("Please login again! ❌");
+        return;
+    }
+
+    let editRequestStr = `[EDIT_ENTRY]|ID:${item.dataId || 'N/A'}|OldAcc:${item.account}|NewAcc:${newAcc}|OldReason:${item.reason}|NewReason:${newReason}|Date:${item.date || getLocalDateString()}`;
+
+    setStatus("Sending edit request to Admin... ⏳");
+
+    fetch(REQUESTS_URL, {
+        method: "POST",
+        body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: editRequestStr })
+    })
+    .then(res => res.text())
+    .then(() => {
+        item.account = newAcc;
+        item.reason = newReason;
+        saveReport();
+        
+        QUEUE.forEach(q => {
+            if ((q.dataId && q.dataId === item.dataId) || q.account === item.account) {
+                q.account = newAcc;
+                q.reason = newReason;
+            }
+        });
+        saveQueue();
+
+        renderEntriesLog();
+        closeEditModal();
+        alert("Edit request sent successfully to Admin and updated locally! ✅✉️");
+        setStatus("Edit request sent successfully ✅");
+    })
+    .catch(() => {
+        alert("Failed to send edit request to Admin! ❌");
+        setStatus("Edit request failed ❌");
+    });
+}
+
+function renderDownloadTable() {
+    let tbody = document.getElementById("downloadTableBody");
+    let countBadge = document.getElementById("downloadTabCount");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
+    if(countBadge) countBadge.innerText = `${FILTERED_SHEET_DATA.length} Records`;
+
+    if (FILTERED_SHEET_DATA.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No Filter Applied / Data Found</td></tr>`;
+        return;
+    }
+
+    [...FILTERED_SHEET_DATA].reverse().forEach(item => {
+        tbody.innerHTML += `<tr>
+            <td><b>${item.dataId || '-'}</b></td>
+            <td><b>${item.account || ''}</b></td>
+            <td>${item.reason || ''}</td>
+            <td>${item.date || ''}</td>
+        </tr>`;
+    });
+}
+
+// Account/reason/date search must also see today's entries that are saved on
+// this device but have not yet synced to the Google Sheet (e.g. due to a
+// temporary server error) - otherwise a just-submitted entry looks "missing"
+// even though it is safely queued and will sync automatically.
+function getSearchableRecords() {
+    let combined = [...LIVE_SHEET_DATA];
+    QUEUE.forEach(qItem => {
+        let qId = (qItem.dataId || "").trim();
+        let qAcc = (qItem.account || "").trim();
+        let alreadyIn = combined.some(item => {
+            let id = (item.dataId || item.id || "").trim();
+            let acc = (item.account || "").trim();
+            return (qId && id && qId === id) || (qAcc && acc && qAcc === acc);
+        });
+        if (!alreadyIn) combined.push(qItem);
+    });
+    return combined;
+}
+
+function applyMultiFilter() {
+    let filterAccount = document.getElementById("filterAccount").value.trim().toLowerCase();
+    let filterReason = document.getElementById("filterReason").value.trim().toLowerCase();
+    let filterDate = document.getElementById("filterDate").value.trim();
+    let searchable = getSearchableRecords();
+
+    if (!filterAccount && !filterReason && !filterDate) {
+        let monthPrefix = getLocalDateString().slice(0, 7); // "YYYY-MM"
+        FILTERED_SHEET_DATA = searchable.filter(item => (item.date || "").startsWith(monthPrefix));
+        renderDownloadTable();
+        return;
+    }
+
+    FILTERED_SHEET_DATA = searchable.filter(item => {
+        let matchAccount = filterAccount ? (item.account || "").toLowerCase().includes(filterAccount) : true;
+        let matchReason = filterReason ? (item.reason || "").toLowerCase().includes(filterReason) : true;
+
+        let matchDate = true;
+        if (filterAccount) {
+            matchDate = true;
+        } else if (filterDate) {
+            matchDate = (item.date || "") === filterDate;
+        }
+
+        return matchAccount && matchReason && matchDate;
+    });
+    renderDownloadTable();
+}
+
+function resetMultiFilter() {
+    document.getElementById("filterAccount").value = "";
+    document.getElementById("filterReason").value = "";
+    document.getElementById("filterDate").value = getLocalDateString();
+    let today = getLocalDateString();
+    FILTERED_SHEET_DATA = getSearchableRecords().filter(item => (item.date || "") === today);
+    renderDownloadTable();
+}
+
+function handleFilterInputClear() {
+    let accVal = document.getElementById("filterAccount").value.trim();
+    let reasonVal = document.getElementById("filterReason").value;
+    let dateVal = document.getElementById("filterDate").value;
+
+    if (!accVal && !reasonVal && !dateVal) {
+        let today = getLocalDateString();
+        FILTERED_SHEET_DATA = getSearchableRecords().filter(item => (item.date || "") === today);
+        renderDownloadTable();
+    }
+}
+
+function downloadFilteredPDF() {
+    if (FILTERED_SHEET_DATA.length === 0) { alert("No data available to download! ❌"); return; }
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    let username = user ? user.username : "user";
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text("MR Field Service Submissions Report", 14, 15);
+    doc.setFontSize(9);
+    doc.text(`User: ${username} | Total Records: ${FILTERED_SHEET_DATA.length}`, 14, 22);
+    
+    const tableColumns = ["Data ID", "Account Number", "Reason", "Date"];
+    const tableRows = [];
+    FILTERED_SHEET_DATA.forEach(row => { tableRows.push([row.dataId || '-', row.account || '', row.reason || '', row.date || '']); });
+    
+    doc.autoTable({
+        startY: 26, head: [tableColumns], body: tableRows, theme: 'striped',
+        headStyles: { fillColor: [0, 123, 255] }, styles: { fontSize: 8 }
+    });
+    doc.save(`${username}_GoogleSheet_Report.pdf`);
+}
+
+function downloadFilteredCSV() {
+    if (FILTERED_SHEET_DATA.length === 0) { alert("No data available to download! ❌"); return; }
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    let username = user ? user.username : "user";
+    
+    let csvContent = "data:text/csv;charset=utf-8,Data ID,Account Number,Reason,Date\n";
+    FILTERED_SHEET_DATA.forEach(row => {
+        let dataId = `"${row.dataId || '-'}"`;
+        let account = `"${row.account || ''}"`;
+        let reason = `"${(row.reason || '').replace(/"/g, '""')}"`;
+        let date = `"${row.date || ''}"`;
+        csvContent += `${dataId},${account},${reason},${date}\n`;
+    });
+
+    let encodedUri = encodeURI(csvContent);
+    let link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${username}_GoogleSheet_Report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function checkLiveReset() {  
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);  
+    if (!user || !user.username || isResetting) return;  
+
+    let now = new Date();  
+    let hours = now.getHours();  
+    let minutes = now.getMinutes();  
+    let currentToday = getLocalDateString();  
+
+    if (user.loginDate !== currentToday || (hours === 23 && minutes === 59)) {  
+        isResetting = true; 
+        let username = user.username.toLowerCase();
+
+        REPORT_DATA = { date: currentToday, total: 0, success: 0, failed: 0 };  
+        SUBMITTED_LOG = [];
+        LIVE_SHEET_DATA = [];
+        // QUEUE is intentionally NOT cleared here. Clearing it used to permanently
+        // delete any entry that had not yet synced to Google Sheets (e.g. because
+        // of a server error) with no record of what was lost. Unsynced entries now
+        // carry over to the next day and keep retrying until they succeed.
+
+        localStorage.setItem("REPORT_DATA_" + username, JSON.stringify(REPORT_DATA));
+        localStorage.setItem("SUBMITTED_LOG_" + username, JSON.stringify(SUBMITTED_LOG));
+        localStorage.removeItem("lastEntry_" + username);
+        localStorage.removeItem("PREFIXES_" + username);
+        localStorage.removeItem("SHEET_COUNT_" + username);
+
+        updateStatistics();  
+        renderEntriesLog();
+        
+        logout();   
+    }  
+}  
+setInterval(checkLiveReset, 10000);
+
+function isDuplicate(data){    
+    let accDigits = (data.account || "").replace(/\D/g, "");
+    let targetDate = data.date || getLocalDateString();
+
+    if(!accDigits) return false;
+
+    let isLocalSubmitted = SUBMITTED_LOG.some(item => 
+        (item.account || "").replace(/\D/g, "") === accDigits && (item.date || "") === targetDate
+    );
+
+    let isQueueDup = QUEUE.some(item => 
+        (item.account || "").replace(/\D/g, "") === accDigits && (item.date || "") === targetDate
+    );
+
+    let isLiveDup = LIVE_SHEET_DATA.some(item => 
+        (item.account || "").replace(/\D/g, "") === accDigits && (item.date || "") === targetDate
+    );
+
+    return isLocalSubmitted || isQueueDup || isLiveDup;
+}    
+    
+function sendToServer(data, timeoutMs = 15000){    
+    let queryString = new URLSearchParams(data).toString();
+    return Promise.race([
+        fetch(DATA_URL + "?" + queryString).then(res => {
+            if(!res.ok) throw new Error("Server Error");
+            return res.json();
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Network Timeout")), timeoutMs))
+    ]);
+}    
+    
+async function syncQueue() {
+    if (isSyncing) return;
+
+    if (QUEUE.length === 0) {
+        REPORT_DATA.failed = 0;
+        saveReport();
+        updateStatistics();
+        setStatus("No pending data to sync 🟢");
+        return;
+    }
+
+    isSyncing = true;
+    setStatus("Syncing... 🔄");
+
+    while (QUEUE.length > 0) {
+        let currentItem = QUEUE[0];
+        try {
+            let resData = await sendToServer(currentItem, 10000);
+            if(resData && resData.success) {
+                QUEUE.shift();
+                saveQueue();
+                REPORT_DATA.success++;
+                if (REPORT_DATA.failed > 0) REPORT_DATA.failed--;
+                saveReport();
+                updateStatistics();
+                renderEntriesLog();
+            } else if(resData && resData.message && resData.message.includes("Duplicate")) {
+                QUEUE.shift();
+                if (REPORT_DATA.failed > 0) REPORT_DATA.failed--;
+                saveQueue();
+            } else {
+                break;
+            }
+        } catch (err) { 
+            break; 
+        }
+    }
+
+    if (QUEUE.length === 0) {
+        REPORT_DATA.failed = 0;
+        saveReport();
+    }
+    
+    isSyncing = false;
+    setStatus("Sync completed ✅");
+    fetchUserLiveSheetData();
+}
+
+function submitForm(){    
+    let current = safeJSONParse(localStorage.getItem("currentUser"), null);    
+    if(!current || !current.username) { setStatus("Please login again ❌"); return; }
+
+    let p1 = document.getElementById("prefix1").value.trim();
+    let p2 = document.getElementById("prefix2").value.trim();
+    let p3 = document.getElementById("prefix3").value.trim();
+
+    if(p1.length !== 2 || p2.length !== 2 || p3.length !== 3) {
+        setStatus("Prefix Error: Must be 2, 2, 3 digits ❌"); 
+        return;
+    }
+
+    let account = document.getElementById("account").value.trim();    
+    let reason = document.getElementById("reason").value.trim();    
+    let date = document.getElementById("date").value;      
+    if(!account || !reason || !date){ setStatus("Fill all fields ❌"); return; }      
+    
+    if(account.replace(/\D/g, "").length !== 12){ setStatus("Invalid Account Format ❌"); return; }
+    
+    // Fixed Data ID Logic (Prevents repeated date strings and produces DI8271, DI8272, etc.)
+    let uName = current.username.trim();
+    let userPrefix = uName.length >= 2 ? uName.substring(0, 2).toUpperCase() : uName.toUpperCase();
+
+    let dateParts = date.split("-");
+    let monthPart = parseInt(dateParts[1] || "1", 10);
+    let dayPart = parseInt(dateParts[2] || "1", 10);
+
+    let todaySheetCount = LIVE_SHEET_DATA.filter(item => (item.date || "") === date).length;
+    let localSubmittedCount = SUBMITTED_LOG.filter(item => (item.date || "") === date).length;
+    let userCountToday = Math.max(todaySheetCount, localSubmittedCount) + 1;
+
+    let dataId = `${userPrefix}${monthPart}${dayPart}${userCountToday}`;
+
+    let data = { dataId, account, reason, date, assistant: current.username, timestamp: Date.now() };      
+    
+    if(isDuplicate(data)){ 
+        setStatus("Duplicate entry blocked ❌"); 
+        return; 
+    }
+
+    if(!navigator.onLine){    
+        REPORT_DATA.total++;
+        SUBMITTED_LOG.push(data); 
+        QUEUE.push(data);    
+        saveQueue();    
+        saveReport();  
+        setStatus(`Saved Offline 📥 (ID: ${dataId})`);    
+        updateStatistics();  
+        renderEntriesLog();
+        return;    
+    }      
+
+    setStatus("Saving... ⏳");    
+    sendToServer(data, 15000)   
+    .then((resData)=>{    
+        if(resData && resData.success) {
+            REPORT_DATA.total++;
+            REPORT_DATA.success++;  
+            SUBMITTED_LOG.push(data); 
+            saveReport();  
+            setStatus(`Saved Successfully ✅ (ID: ${resData.dataId || dataId})`);    
+            updateStatistics();  
+            renderEntriesLog();
+
+            document.getElementById("account").value = "";    
+            document.getElementById("reason").value = "";    
+            document.getElementById("date").value = getLocalDateString();  
+            updateAccountPrefix();
+        } else {
+            setStatus(resData.message || "Duplicate entry blocked ❌");
+        }
+    })    
+    .catch(()=>{    
+        REPORT_DATA.total++;
+        REPORT_DATA.failed++;  
+        saveReport();  
+        SUBMITTED_LOG.push(data);
+        QUEUE.push(data);    
+        saveQueue();    
+        setStatus("Saved Offline (Sync pending) 📥");    
+        updateStatistics();  
+        renderEntriesLog();
+
+        document.getElementById("account").value = "";    
+        document.getElementById("reason").value = "";    
+        document.getElementById("date").value = getLocalDateString();  
+        updateAccountPrefix();
+    });    
+}    
+
+function downloadPDF() {
+    if (SUBMITTED_LOG.length === 0) { alert("No data available! ❌"); return; }
+    let user = safeJSONParse(localStorage.getItem("currentUser"), null);
+    let username = user ? user.username : "user";
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text("MR Field Service Daily Report", 14, 15);
+    doc.setFontSize(9);
+    doc.text(`User: ${username} | Date: ${getLocalDateString()}`, 14, 22);
+    
+    const tableColumns = ["Data ID", "Account Number", "Reason", "Date", "Submitted By"];
+    const tableRows = [];
+    SUBMITTED_LOG.forEach(row => { tableRows.push([row.dataId || '-', row.account, row.reason, row.date, row.assistant]); });
+    
+    doc.autoTable({
+        startY: 26, head: [tableColumns], body: tableRows, theme: 'striped',
+        headStyles: { fillColor: [0, 123, 255] }, styles: { fontSize: 8 }
+    });
+    doc.save(`${username}_Report_.pdf`);
+}
+
+let cachedUser = safeJSONParse(localStorage.getItem("currentUser"), null);  
+if (cachedUser && cachedUser.username) {  
+    showApp();  
+    setTimeout(() => { updateStatistics(); syncQueue(); }, 1500);   
+}  
+</script>  
+
+<!-- ===== Monthly Summary Module Script (Sierra Engineering) ===== -->
+<script>
+const SUMMARY_WEB_APP_URL="https://script.google.com/macros/s/AKfycbxOL7W30RlCBHmN-u3su_Y_IzOMjMjaHQ9pp_P3teVeD87HGBrTjHvHoK5V-D3wGhkK/exec";
+const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let undoStack=[],redoStack=[],isEditing=false;
+
+function showLoading(show){document.getElementById('summaryLoadingOverlay').style.display=show?'flex':'none'}
+function getMonthKey(){const m=parseInt(document.getElementById('monthSelect').value),y=document.getElementById('yearSelect').value;return `${monthNames[m]} ${y}`}
+
+function saveState(){
+ const state=[];
+ document.querySelectorAll('#tableBody tr').forEach(tr=>{
+  const inputs=tr.querySelectorAll('input');
+  state.push({date:inputs[0].value,area:inputs[1].value,order:inputs[2].value,qty:inputs[3].value});
+ });
+ undoStack.push(state);redoStack=[];updateUndoRedoButtons();
+}
+function restoreState(state){
+ document.querySelectorAll('#tableBody tr').forEach((tr,index)=>{
+  if(state[index]){const inputs=tr.querySelectorAll('input');inputs[0].value=state[index].date||'';inputs[1].value=state[index].area||'';inputs[2].value=state[index].order||'';inputs[3].value=state[index].qty||''}
+ });
+ calcTotal();loadRowDataToToolbar();
+}
+function undo(){
+ if(!undoStack.length)return;
+ const currentState=[];
+ document.querySelectorAll('#tableBody tr').forEach(tr=>{const i=tr.querySelectorAll('input');currentState.push({date:i[0].value,area:i[1].value,order:i[2].value,qty:i[3].value})});
+ redoStack.push(currentState);restoreState(undoStack.pop());updateUndoRedoButtons();
+}
+function redo(){
+ if(!redoStack.length)return;
+ const currentState=[];
+ document.querySelectorAll('#tableBody tr').forEach(tr=>{const i=tr.querySelectorAll('input');currentState.push({date:i[0].value,area:i[1].value,order:i[2].value,qty:i[3].value})});
+ undoStack.push(currentState);restoreState(redoStack.pop());updateUndoRedoButtons();
+}
+function updateUndoRedoButtons(){document.getElementById('undoBtn').disabled=!undoStack.length;document.getElementById('redoBtn').disabled=!redoStack.length}
+let raNameTouched=false;
+function getLoginUsername(){
+ try{const u=JSON.parse(localStorage.getItem("currentUser"));return (u&&u.username)?String(u.username).trim():''}catch(e){return ''}
+}
+function setRaNameField(name){
+ document.getElementById('raName').value=name;
+ document.getElementById('raToolbarInput').value=name;
+}
+async function autoFillRaName(){
+ const loginUser=getLoginUsername();
+ if(!loginUser)return;
+ const cacheKey="RA_NAME_"+loginUser.toLowerCase();
+ // 1) instant fill from this device's cache
+ const cached=localStorage.getItem(cacheKey);
+ if(cached&&!raNameTouched&&!document.getElementById('raName').value.trim())setRaNameField(cached);
+ // 2) confirm with Google Sheet (name saved earlier under this login user)
+ try{
+  const res=await fetch(`${SUMMARY_WEB_APP_URL}?action=getRaName&loginUser=${encodeURIComponent(loginUser)}`);
+  const r=await res.json();
+  if(r.status==='success'&&r.raName){
+   localStorage.setItem(cacheKey,r.raName);
+   if(!raNameTouched)setRaNameField(r.raName);
+  }
+ }catch(err){console.warn('R.A name auto-fill failed:',err)}
+}
+function updateRaNameFromInput(){document.getElementById('raName').value=document.getElementById('raToolbarInput').value}
+function syncRaToToolbar(){document.getElementById('raToolbarInput').value=document.getElementById('raName').value}
+
+function initSelectors(){
+ const ms=document.getElementById('monthSelect'),ys=document.getElementById('yearSelect'),fs=document.getElementById('fromSnoSelect'),ts=document.getElementById('toSnoSelect'),now=new Date();
+ ms.innerHTML='';ys.innerHTML='';fs.innerHTML='';ts.innerHTML='';
+ monthNames.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m;if(i===now.getMonth())o.selected=true;ms.appendChild(o)});
+ const cy=now.getFullYear();
+ for(let y=cy-2;y<=cy+5;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===cy)o.selected=true;ys.appendChild(o)}
+ const todayDay=now.getDate().toString().padStart(2,'0');
+ for(let i=1;i<=31;i++){const s=i.toString().padStart(2,'0');let o=document.createElement('option');o.value=s;o.textContent=s;if(s===todayDay)o.selected=true;fs.appendChild(o);o=document.createElement('option');o.value=s;o.textContent=s;ts.appendChild(o)}
+ updateBillingCycle();buildTableRows();loadRowDataToToolbar();
+}
+function loadRowDataToToolbar(){
+ const sno=document.getElementById('fromSnoSelect').value,tr=document.querySelector(`#tableBody tr[data-sno="${sno}"]`);
+ if(!tr)return;
+ document.getElementById('tbArea').value=tr.querySelector('.area-col').value;
+ document.getElementById('tbOrder').value=tr.querySelector('.order-col').value;
+ document.getElementById('tbQty').value=tr.querySelector('.qty-col').value;
+}
+function addRowData(){
+ const sno=document.getElementById('fromSnoSelect').value,tr=document.querySelector(`#tableBody tr[data-sno="${sno}"]`);
+ if(!tr)return;saveState();
+ tr.querySelector('.area-col').value=document.getElementById('tbArea').value;
+ tr.querySelector('.order-col').value=document.getElementById('tbOrder').value;
+ tr.querySelector('.qty-col').value=document.getElementById('tbQty').value;
+ updateRowDate(tr);calcTotal();
+ document.getElementById('tbArea').value='';document.getElementById('tbOrder').value='';document.getElementById('tbQty').value='';
+ const fs=document.getElementById('fromSnoSelect'),n=fs.selectedIndex+1;
+ if(n<fs.options.length){fs.selectedIndex=n;loadRowDataToToolbar()}document.getElementById('tbArea').focus();
+}
+function handleKeyPress(e){if(e.key==='Enter')addRowData()}
+function updateBillingCycle(){
+ const m=parseInt(document.getElementById('monthSelect').value),y=parseInt(document.getElementById('yearSelect').value);
+ document.getElementById('periodFrom').value="01 "+monthNames[m];
+ document.getElementById('periodTo').value=new Date(y,m+1,0).getDate().toString().padStart(2,'0')+" "+monthNames[m];
+ updateRowDatesOnMonthChange();
+}
+function buildTableRows(){
+ const tbody=document.getElementById('tableBody');tbody.innerHTML='';
+ for(let i=1;i<=31;i++){
+  const sno=i.toString().padStart(2,'0'),tr=document.createElement('tr');tr.setAttribute('data-sno',sno);
+  tr.innerHTML=`<td class="serial sno">${i}</td><td class="date"><input type="text" class="cell-input date-col" data-row="${i}"></td><td class="area"><input type="text" class="cell-input area-col" data-row="${i}" onfocus="saveStateOnFocus()" onchange="saveState()" oninput="handleRowInput(this)"></td><td class="workorder"><input type="text" class="cell-input order-col" data-row="${i}" onfocus="saveStateOnFocus()" onchange="saveState()" oninput="handleRowInput(this)"></td><td class="qty"><input type="text" class="cell-input qty-col" data-row="${i}" onfocus="saveStateOnFocus()" onchange="saveState()" oninput="handleRowInput(this);calcTotal();"></td>`;
+  tbody.appendChild(tr);
+ }
+}
+function saveStateOnFocus(){if(!isEditing){saveState();isEditing=true}}
+document.addEventListener('focusout',e=>{if(e.target.classList.contains('cell-input')||e.target.id.startsWith('tb'))isEditing=false});
+function handleRowInput(el){const tr=el.closest('tr');updateRowDate(tr);if(document.getElementById('fromSnoSelect').value===tr.getAttribute('data-sno'))loadRowDataToToolbar()}
+function updateRowDate(tr){
+ const d=tr.querySelector('.date-col'),s=tr.getAttribute('data-sno'),m=parseInt(document.getElementById('monthSelect').value);
+ const a=tr.querySelector('.area-col').value.trim(),o=tr.querySelector('.order-col').value.trim(),q=tr.querySelector('.qty-col').value.trim();
+ d.value=(a!==''||o!==''||q!=='')?`${s}. ${monthNames[m]}`:'';
+}
+function updateRowDatesOnMonthChange(){document.querySelectorAll('#tableBody tr').forEach(updateRowDate)}
+function calcTotal(){let sum=0;document.querySelectorAll('.qty-col').forEach(i=>{const v=parseFloat(i.value);if(!isNaN(v))sum+=v});document.getElementById('totalBills').value=sum>0?sum:''}
+function clearSelectedRow(){
+ const sno=document.getElementById('fromSnoSelect').value,tr=document.querySelector(`#tableBody tr[data-sno="${sno}"]`);if(!tr)return;saveState();
+ tr.querySelector('.area-col').value='';tr.querySelector('.order-col').value='';tr.querySelector('.qty-col').value='';tr.querySelector('.date-col').value='';
+ loadRowDataToToolbar();calcTotal();alert(`Serial NO ${sno} data cleared.`);
+}
+function copyRowData(){
+ const f=document.getElementById('fromSnoSelect').value,t=document.getElementById('toSnoSelect').value;if(f===t)return alert('Please select a different Serial NO.');
+ const s=document.querySelector(`#tableBody tr[data-sno="${f}"]`),d=document.querySelector(`#tableBody tr[data-sno="${t}"]`);if(!s||!d)return;saveState();
+ d.querySelector('.area-col').value=s.querySelector('.area-col').value;d.querySelector('.order-col').value=s.querySelector('.order-col').value;updateRowDate(d);alert(`Serial NO ${f} data copied to ${t}.`);
+}
+function moveRowData(){
+ const f=document.getElementById('fromSnoSelect').value,t=document.getElementById('toSnoSelect').value;if(f===t)return alert('Please select a different Serial NO.');
+ const s=document.querySelector(`#tableBody tr[data-sno="${f}"]`),d=document.querySelector(`#tableBody tr[data-sno="${t}"]`);if(!s||!d)return;saveState();
+ d.querySelector('.area-col').value=s.querySelector('.area-col').value;d.querySelector('.order-col').value=s.querySelector('.order-col').value;updateRowDate(d);
+ s.querySelector('.area-col').value='';s.querySelector('.order-col').value='';s.querySelector('.qty-col').value='';s.querySelector('.date-col').value='';
+ loadRowDataToToolbar();calcTotal();alert(`Serial NO ${f} data moved to ${t}.`);
+}
+function clearTableData(){
+ if(!confirm('Are you sure you want to clear all data?'))return;saveState();
+ document.querySelectorAll('#tableBody input').forEach(i=>i.value='');document.getElementById('totalBills').value='';loadRowDataToToolbar();alert('All data cleared.');
+}
+
+async function buildSummaryExportCanvas(){
+ const source=document.getElementById('pdfContent');
+ const raName=document.getElementById('raName').value.trim()||'Summary';
+ const monthKey=getMonthKey();
+
+ if(typeof window.html2canvas!=='function'){
+  throw new Error('html2canvas library did not load. Please check internet connection.');
+ }
+
+ let exportPage=null;
+ let exportStyle=null;
+
+ try{
+  /*
+   * IMPORTANT:
+   * The Monthly Summary is displayed inside the mobile 500px app container.
+   * Capturing that screen element directly changes the A4 aspect ratio.
+   *
+   * For PDF export only, create an exact 210mm x 297mm copy using the
+   * original A4 dimensions. The original screen/UI is not changed.
+   */
+  exportPage=source.cloneNode(true);
+  exportPage.id='pdfExportPage';
+
+  const originalInputs=source.querySelectorAll('input, select, textarea');
+  const clonedInputs=exportPage.querySelectorAll('input, select, textarea');
+
+  originalInputs.forEach((src,i)=>{
+   const dst=clonedInputs[i];
+   if(!dst) return;
+
+   if(src.tagName==='SELECT'){
+    Array.from(dst.options).forEach((opt,j)=>{
+     if(src.options[j]) opt.selected=src.options[j].selected;
+    });
+    dst.value=src.value;
+   }else{
+    dst.value=src.value;
+    dst.setAttribute('value',src.value);
+   }
+  });
+
+  /*
+   * PDF text fix (meta fields):
+   * The same html2canvas input-rendering issue described below also
+   * affects the Billing Cycle Period, Revenue Assistant Name and
+   * Contract Number fields (outside the table). Convert them to text
+   * spans in the PDF clone only; the live form remains unchanged.
+   */
+  const metaInputs=exportPage.querySelectorAll('.meta-block input');
+  metaInputs.forEach(input=>{
+   const span=document.createElement('span');
+   span.textContent=input.value || '';
+   span.style.display='inline-block';
+   span.style.fontFamily="'Times New Roman', Times, serif";
+   span.style.fontSize='10.5pt';
+   span.style.color='#000';
+   span.style.borderBottom='1px solid #000';
+   span.style.padding='1px 3px';
+   span.style.whiteSpace='nowrap';
+
+   if(input.id==='periodFrom' || input.id==='periodTo'){
+    span.style.width='70px';
+    span.style.textAlign='center';
+   }else if(input.id==='raName'){
+    span.style.width='160px';
+   }else if(input.id==='contractNo'){
+    span.style.width='420px';
+   }
+
+   if(input.parentNode) input.parentNode.replaceChild(span,input);
+  });
+
+  /*
+   * PDF text fix:
+   * Browser input controls can be clipped or rendered differently by
+   * html2canvas. Convert only the table inputs in the PDF clone to
+   * normal text spans. The live Monthly Summary table remains unchanged.
+   */
+  const tableInputs=exportPage.querySelectorAll('table.sierra-table input');
+  tableInputs.forEach(input=>{
+   const span=document.createElement('span');
+   span.textContent=input.value || '';
+   span.style.display='block';
+   span.style.width='100%';
+   span.style.height='100%';
+   span.style.boxSizing='border-box';
+   span.style.fontSize='9.5pt';
+   span.style.fontWeight='bold';
+   span.style.color='#000';
+   span.style.fontFamily="'Times New Roman', Times, serif";
+   span.style.lineHeight='20px';
+   span.style.whiteSpace='nowrap';
+   span.style.overflow='hidden';
+   span.style.textOverflow='clip';
+
+   if(input.classList.contains('area-col') || input.classList.contains('order-col')){
+    span.style.textAlign='left';
+    span.style.paddingLeft='4px';
+   }else{
+    span.style.textAlign='center';
+   }
+
+   if(input.parentNode) input.parentNode.replaceChild(span,input);
+  });
+
+  exportStyle=document.createElement('style');
+  exportStyle.id='pdfExportStyle';
+  exportStyle.textContent=`
+   #pdfExportPage{
+     width:210mm !important;
+     height:297mm !important;
+     min-height:297mm !important;
+     max-width:none !important;
+     margin:0 !important;
+     padding:12mm 14mm !important;
+     background:#fff !important;
+     box-shadow:none !important;
+     border-radius:0 !important;
+     overflow:hidden !important;
+     box-sizing:border-box !important;
+     font-family:'Times New Roman',Times,serif !important;
+   }
+
+   #pdfExportPage .company-header{
+     text-align:center !important;
+     margin-bottom:10px !important;
+   }
+   #pdfExportPage .company-header .cname{
+     font-size:15pt !important;
+     font-weight:bold !important;
+   }
+   #pdfExportPage .company-header .addr,
+   #pdfExportPage .company-header .tel{
+     font-size:10.5pt !important;
+   }
+
+   #pdfExportPage .meta-block{
+     margin-top:10px !important;
+     margin-bottom:8px !important;
+     font-size:10.5pt !important;
+   }
+   #pdfExportPage .meta-row{
+     display:flex !important;
+     justify-content:space-between !important;
+     margin-bottom:4px !important;
+     gap:20px !important;
+     flex-wrap:nowrap !important;
+   }
+   #pdfExportPage .meta-left{
+     display:flex !important;
+     align-items:center !important;
+     gap:6px !important;
+     flex-wrap:nowrap !important;
+   }
+   #pdfExportPage .meta-block input{
+     width:auto !important;
+     font-family:inherit !important;
+     font-size:10.5pt !important;
+     border:none !important;
+     border-bottom:1px solid #000 !important;
+     padding:1px 3px !important;
+     margin:0 !important;
+     background:transparent !important;
+     border-radius:0 !important;
+   }
+   #pdfExportPage .billing-period input{
+     width:70px !important;
+     text-align:center !important;
+   }
+   #pdfExportPage .ra-name input{
+     width:160px !important;
+   }
+   #pdfExportPage .contract-no input{
+     width:420px !important;
+     max-width:none !important;
+   }
+
+   #pdfExportPage table.sierra-table{
+     width:100% !important;
+     border-collapse:collapse !important;
+     margin-top:6px !important;
+     table-layout:fixed !important;
+   }
+   #pdfExportPage table.sierra-table th,
+   #pdfExportPage table.sierra-table td{
+     border:1px solid #000 !important;
+     padding:2px 2px !important;
+     font-size:9.5pt !important;
+     text-align:center !important;
+   }
+   #pdfExportPage table.sierra-table th{
+     font-weight:bold !important;
+     background:#f2f2f2 !important;
+     vertical-align:middle !important;
+   }
+   #pdfExportPage table.sierra-table th.col-serial,
+   #pdfExportPage table.sierra-table td.serial{width:6% !important}
+   #pdfExportPage table.sierra-table th.col-date,
+   #pdfExportPage table.sierra-table td.date{width:11% !important}
+   #pdfExportPage table.sierra-table th.col-area,
+   #pdfExportPage table.sierra-table td.area{width:45% !important}
+   #pdfExportPage table.sierra-table th.col-workorder,
+   #pdfExportPage table.sierra-table td.workorder{
+     width:24% !important;
+     white-space:nowrap !important;
+     overflow:hidden !important;
+     text-overflow:clip !important;
+   }
+   #pdfExportPage table.sierra-table th.col-qty,
+   #pdfExportPage table.sierra-table td.qty{width:14% !important}
+
+   #pdfExportPage table.sierra-table input{
+     width:100% !important;
+     border:none !important;
+     text-align:center !important;
+     font-family:inherit !important;
+     font-size:9.5pt !important;
+     background:transparent !important;
+     padding:0 !important;
+     margin:0 !important;
+     outline:none !important;
+     border-radius:0 !important;
+   }
+
+   #pdfExportPage table.sierra-table span{
+     display:block !important;
+     width:100% !important;
+     height:100% !important;
+     box-sizing:border-box !important;
+     font-family:'Times New Roman',Times,serif !important;
+     font-size:9.5pt !important;
+     font-weight:bold !important;
+     color:#000 !important;
+     line-height:20px !important;
+     white-space:nowrap !important;
+     overflow:hidden !important;
+     text-overflow:clip !important;
+   }
+
+   #pdfExportPage table.sierra-table td.area span,
+   #pdfExportPage table.sierra-table td.workorder span{
+     text-align:left !important;
+     padding-left:4px !important;
+   }
+
+   #pdfExportPage table.sierra-table td.date span,
+   #pdfExportPage table.sierra-table td.qty span,
+   #pdfExportPage table.sierra-table td.serial span{
+     text-align:center !important;
+   }
+
+   #pdfExportPage .total-row-tr td.total-label{
+     text-align:right !important;
+     font-weight:bold !important;
+     font-size:10pt !important;
+     padding-right:8px !important;
+   }
+   #pdfExportPage .total-row-tr input{
+     font-weight:bold !important;
+   }
+
+   #pdfExportPage .signatures{
+     display:flex !important;
+     justify-content:space-between !important;
+     margin-top:55px !important;
+     font-size:10.5pt !important;
+     flex-wrap:nowrap !important;
+   }
+   #pdfExportPage .sig-box{
+     width:30% !important;
+     text-align:center !important;
+   }
+   #pdfExportPage .sig-line{
+     border-top:1px solid #000 !important;
+     margin-bottom:3px !important;
+   }
+  `;
+
+  document.head.appendChild(exportStyle);
+
+  exportPage.style.position='absolute';
+  exportPage.style.left='-10000px';
+  exportPage.style.top='0';
+  exportPage.style.display='block';
+
+  document.body.appendChild(exportPage);
+
+  // Allow the browser to apply the exact A4 layout before capturing.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+  const canvas=await window.html2canvas(exportPage,{
+   scale:2,
+   useCORS:true,
+   allowTaint:false,
+   logging:false,
+   backgroundColor:'#ffffff',
+   width:Math.ceil(exportPage.getBoundingClientRect().width),
+   height:Math.ceil(exportPage.getBoundingClientRect().height),
+   scrollX:0,
+   scrollY:0,
+   windowWidth:Math.ceil(exportPage.getBoundingClientRect().width),
+   windowHeight:Math.ceil(exportPage.getBoundingClientRect().height)
+  });
+
+  return {canvas, raName, monthKey};
+
+ }finally{
+  if(exportPage && exportPage.parentNode) exportPage.parentNode.removeChild(exportPage);
+  if(exportStyle && exportStyle.parentNode) exportStyle.parentNode.removeChild(exportStyle);
+ }
+}
+
+async function downloadSummaryPDF(){
+ showLoading(true);
+ try{
+  if(!window.jspdf || typeof window.jspdf.jsPDF!=='function'){
+   throw new Error('jsPDF library did not load. Please check internet connection.');
+  }
+
+  const {canvas, raName, monthKey}=await buildSummaryExportCanvas();
+
+  const imgData=canvas.toDataURL('image/jpeg',0.98);
+  const PDF=window.jspdf.jsPDF;
+  const pdf=new PDF({
+   orientation:'portrait',
+   unit:'mm',
+   format:'a4',
+   compress:true
+  });
+
+  // Exact A4 placement: no automatic aspect-ratio resizing or margins.
+  pdf.addImage(imgData,'JPEG',0,0,210,297,undefined,'FAST');
+
+  const safeName=raName
+   .replace(/[\\/:*?"<>|]/g,'_')
+   .replace(/\s+/g,'_');
+
+  pdf.save(`${safeName}_${monthKey.replace(' ','_')}.pdf`);
+
+ }catch(err){
+  alert('Error generating PDF: '+(err&&err.message?err.message:err));
+ }finally{
+  showLoading(false);
+ }
+}
+
+async function previewSummaryPDF(){
+ showLoading(true);
+ try{
+  const {canvas}=await buildSummaryExportCanvas();
+  const imgData=canvas.toDataURL('image/jpeg',0.98);
+  showPdfPreviewModal(imgData);
+ }catch(err){
+  alert('Error generating preview: '+(err&&err.message?err.message:err));
+ }finally{
+  showLoading(false);
+ }
+}
+
+function showPdfPreviewModal(imgData){
+ let modal=document.getElementById('pdfPreviewModal');
+ if(modal) modal.remove();
+
+ modal=document.createElement('div');
+ modal.id='pdfPreviewModal';
+ modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:16px;';
+ modal.innerHTML=`
+   <div style="background:#fff;padding:6px;border-radius:6px;max-width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+     <img src="${imgData}" style="max-width:100%;display:block;" alt="PDF Preview">
+   </div>
+   <div style="margin-top:14px;display:flex;gap:10px;padding-bottom:20px;">
+     <button id="pdfPreviewCloseBtn" style="padding:10px 18px;border:none;border-radius:5px;background:#6c757d;color:#fff;font-weight:bold;">✖️ Close</button>
+     <button id="pdfPreviewDownloadBtn" style="padding:10px 18px;border:none;border-radius:5px;background:#17a2b8;color:#fff;font-weight:bold;">📄 Download PDF</button>
+   </div>
+ `;
+
+ document.body.appendChild(modal);
+ document.getElementById('pdfPreviewCloseBtn').onclick=function(){ modal.remove(); };
+ document.getElementById('pdfPreviewDownloadBtn').onclick=function(){
+  modal.remove();
+  downloadSummaryPDF();
+ };
+}
+async function saveDataToGoogleSheet(){
+ const raName=document.getElementById('raName').value.trim();if(!raName){alert('Please enter the Revenue Assistant Name!');document.getElementById('raName').focus();return}
+ showLoading(true);const tableData=[];
+ document.querySelectorAll('#tableBody tr').forEach(tr=>{const i=tr.querySelectorAll('input');tableData.push({sno:tr.getAttribute('data-sno'),date:i[0].value,area:i[1].value,order:i[2].value,qty:i[3].value})});
+ const loginUser=getLoginUsername();
+ const payload={action:"save",raName,loginUser,monthKey:getMonthKey(),data:{billingPeriod:`${document.getElementById('periodFrom').value} - ${document.getElementById('periodTo').value}`,contractNo:document.getElementById('contractNo').value,totalQty:document.getElementById('totalBills').value,tableData}};
+ try{
+  const response=await fetch(SUMMARY_WEB_APP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}),result=await response.json();showLoading(false);
+  if(result.status==='success'){if(loginUser)localStorage.setItem('RA_NAME_'+loginUser.toLowerCase(),raName);alert(`Data for ${raName} saved successfully to Google Sheets!`)}else alert('Error: '+result.message);
+ }catch(err){showLoading(false);alert('Error saving data: '+err.message)}
+}
+
+async function fetchDataFromGoogleSheet(){
+ const raName=document.getElementById('raName').value.trim();if(!raName){alert('Please enter the Revenue Assistant Name!');document.getElementById('raName').focus();return}
+ showLoading(true);const monthKey=getMonthKey();
+ try{
+  const response=await fetch(`${SUMMARY_WEB_APP_URL}?action=load&monthKey=${encodeURIComponent(monthKey)}&raName=${encodeURIComponent(raName)}`),result=await response.json();showLoading(false);
+  if(result.status==='not_found'||result.status==='error'){alert(result.message);return}
+  if(result.status==='success'&&result.data){
+   saveState();
+   if(result.data.billingPeriod){const p=result.data.billingPeriod.split(' - ');if(p[0])document.getElementById('periodFrom').value=p[0];if(p[1])document.getElementById('periodTo').value=p[1]}
+   if(result.data.contractNo)document.getElementById('contractNo').value=result.data.contractNo;
+   document.querySelectorAll('#tableBody tr').forEach((tr,index)=>{const i=tr.querySelectorAll('input');if(result.data.tableData&&result.data.tableData[index]){i[0].value=result.data.tableData[index].date||'';i[1].value=result.data.tableData[index].area||'';i[2].value=result.data.tableData[index].order||'';i[3].value=result.data.tableData[index].qty||''}else{i[0].value='';i[1].value='';i[2].value='';i[3].value=''}});
+   if(result.data.totalQty)document.getElementById('totalBills').value=result.data.totalQty;else calcTotal();
+   loadRowDataToToolbar();alert(`Data for ${raName} (${monthKey}) retrieved successfully!`);
+  }
+ }catch(err){showLoading(false);alert('Error retrieving data: '+err.message)}
+}
+
+initSelectors();
+autoFillRaName();
+</script>
+</body>  
 </html>
