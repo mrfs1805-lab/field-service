@@ -2985,8 +2985,9 @@ async function advDeleteSheetRowByDate(btnElement) {
 function advCopyRowData(){
   const fromVal = parseInt(advDashDate.value);
   const toVal = parseInt(advDashToDate.value);
+  if(isNaN(fromVal) || isNaN(toVal)) return alert('Please select both a Date and a To Date.');
   const sourceRow = document.querySelector('#advTableBody tr[data-date-num="' + fromVal + '"]');
-  if(!sourceRow) return;
+  if(!sourceRow) return alert('Date ' + fromVal + ' not found in this month.');
 
   const data = advGetRowData(sourceRow);
   const start = Math.min(fromVal, toVal);
@@ -3003,15 +3004,20 @@ function advCopyRowData(){
     }
   }
   advSaveState();
+  alert(start === end
+    ? `Date ${fromVal} data copied to Date ${end}.`
+    : `Date ${fromVal} data copied to Dates ${start}–${end}.`);
 }
 
 function advMoveRowData(){
   const fromVal = parseInt(advDashDate.value);
   const toVal = parseInt(advDashToDate.value);
+  if(isNaN(fromVal) || isNaN(toVal)) return alert('Please select both a Date and a To Date.');
+  if(fromVal === toVal) return alert('Please select a different To Date.');
   const sourceRow = document.querySelector('#advTableBody tr[data-date-num="' + fromVal + '"]');
   const targetRow = document.querySelector('#advTableBody tr[data-date-num="' + toVal + '"]');
 
-  if(!sourceRow || !targetRow) return;
+  if(!sourceRow || !targetRow) return alert('One of the selected dates was not found in this month.');
 
   const data = advGetRowData(sourceRow);
 
@@ -3028,6 +3034,7 @@ function advMoveRowData(){
   sourceRow.cells[6].textContent = '';
 
   advSaveState();
+  alert(`Date ${fromVal} data moved to Date ${toVal}.`);
 }
 
 function advCollectAllData(){
