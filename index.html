@@ -1157,6 +1157,13 @@ function showApp(){
     checkLiveReset();
     fetchUserLiveSheetData(); 
 
+    // Advance Programme tab's selectors are built once at page load, before
+    // login (when the user is still "Guest"), so its auto-load silently does
+    // nothing then. Trigger it again now that the real logged-in user is
+    // known, so the Advance Programme data loads right after login instead
+    // of only appearing after the page is refreshed.
+    if (typeof advAutoFillProfile === 'function') advAutoFillProfile();
+
     if (!userAutoRequestInterval) {
         userAutoRequestInterval = setInterval(() => {
             sendDataMismatchRequest(true);
