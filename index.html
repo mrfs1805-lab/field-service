@@ -295,6 +295,73 @@ button:disabled {
  #tab-summary input{border-bottom:1px solid #000!important}
  #tab-summary table.sierra-table input{border:none!important}
 }
+
+/* ===== Advance Programme Tab (scoped so it never affects the other tabs) ===== */
+#tab-advance, #tab-advance *{box-sizing:border-box}
+#tab-advance{font-family:'Times New Roman',Times,serif;color:#222}
+#tab-advance .adv-dashboard{margin-bottom:14px;padding:12px;border:2px solid #0056b3;border-radius:10px;background:#fff;box-shadow:0 4px 15px rgba(0,0,0,.15)}
+#tab-advance .adv-dashboard-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:2px solid #e9edf1;padding-bottom:8px;flex-wrap:wrap;gap:8px}
+#tab-advance .adv-dashboard-title{font-weight:bold;font-size:13pt;color:#0056b3;margin:0}
+#tab-advance .adv-section-title{font-weight:bold;font-size:9pt;color:#333;margin:10px 0 6px;text-transform:uppercase;border-left:4px solid #0056b3;padding-left:6px}
+#tab-advance .adv-row{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;margin-bottom:8px}
+#tab-advance .adv-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:90px}
+#tab-advance .adv-field.sm{min-width:64px;flex:0.5}
+#tab-advance .adv-field.md{min-width:100px}
+#tab-advance .adv-field.lg{min-width:120px;flex:2}
+#tab-advance .adv-field label{font-weight:bold;font-size:8.5pt;color:#444;white-space:nowrap}
+#tab-advance .adv-field input,#tab-advance .adv-field select{width:100%;height:32px;padding:4px 6px;margin:0;border:1px solid #9aa5b1;border-radius:5px;background:#fff;color:#222;font-family:'Times New Roman',Times,serif;font-size:9pt}
+#tab-advance .adv-field input:focus,#tab-advance .adv-field select:focus{border-color:#0056b3;outline:none;box-shadow:0 0 4px rgba(0,86,179,.3)}
+#tab-advance .adv-divider{border:0;height:1px;background:#dcdcdc;margin:10px 0}
+#tab-advance .adv-btn-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center;width:100%}
+#tab-advance button.adv-btn{padding:0 8px;margin:0;border:none;border-radius:5px;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif;font-size:10.5px;display:inline-flex;align-items:center;justify-content:center;gap:4px;transition:all .2s ease;height:32px;width:auto}
+#tab-advance button.adv-btn:active{transform:scale(.97)}
+#tab-advance button.adv-btn:hover{filter:brightness(1.08)}
+#tab-advance button.adv-btn:disabled{opacity:.6;cursor:not-allowed}
+#tab-advance .adv-btn-fetch{background:#2b6cb0;color:#fff}
+#tab-advance .adv-btn-add{background:#2e7d32;color:#fff}
+#tab-advance .adv-btn-clear{background:#d69e2e;color:#fff}
+#tab-advance .adv-btn-copy{background:#2b6cb0;color:#fff}
+#tab-advance .adv-btn-move{background:#2b6cb0;color:#fff}
+#tab-advance .adv-btn-undo{background:#3498db;color:#fff}
+#tab-advance .adv-btn-redo{background:#3498db;color:#fff}
+#tab-advance .adv-btn-save{background:#2e7d32;color:#fff}
+#tab-advance .adv-btn-danger{background:#c53030;color:#fff}
+#tab-advance .adv-btn-preview{background:#2b6cb0;color:#fff}
+#tab-advance .adv-btn-pdf{background:#d97706;color:#fff}
+#tab-advance .adv-action-toolbar{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;background:#f1f3f5;padding:8px;border-radius:6px;margin-top:8px}
+#advReviewBar{display:none;justify-content:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+#tab-advance .adv-sheet-wrap{width:100%;overflow-x:auto}
+#tab-advance .adv-sheet{background:#fff;color:#000;width:100%;min-width:600px;padding:16px 14px 20px;box-shadow:0 6px 22px rgba(0,0,0,.2);border-radius:4px;font-family:'Times New Roman',Times,serif}
+#tab-advance .adv-title-block{text-align:center;line-height:1.4;margin-bottom:14px}
+#tab-advance .adv-title-block .org,#tab-advance .adv-title-block .region,#tab-advance .adv-title-block .prog{font-weight:bold;font-size:10.5pt;text-transform:uppercase}
+#tab-advance .adv-info-line{margin:5px 0;font-size:9pt}
+#tab-advance .adv-field-row{display:flex;align-items:baseline;margin:5px 0;font-size:9pt;gap:5px;max-width:100%}
+#tab-advance .adv-field-row .adv-label{white-space:nowrap;min-width:150px;font-size:9pt}
+#tab-advance .adv-field-row .adv-value-display{flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 3px;font-weight:bold;font-size:9pt}
+#tab-advance table.adv-prog-table{width:100%;min-width:560px;border-collapse:collapse;margin-top:14px;font-size:8pt}
+#tab-advance table.adv-prog-table th,#tab-advance table.adv-prog-table td{border:1px solid #000;padding:3px 4px;text-align:center;font-size:8pt}
+#tab-advance table.adv-prog-table th{background:#f0f0f0;font-weight:bold;vertical-align:middle}
+#tab-advance table.adv-prog-table th.adv-col-compact,#tab-advance table.adv-prog-table td.adv-col-compact{white-space:nowrap;width:1%}
+#tab-advance table.adv-prog-table th.adv-col-routeno,#tab-advance table.adv-prog-table td.adv-route-no-col{width:15%;text-align:center}
+#tab-advance table.adv-prog-table th.adv-col-routename,#tab-advance table.adv-prog-table td.adv-route-name-col{width:60%;text-align:left}
+#advLoadingOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:10000;justify-content:center;align-items:center;color:#fff;font-size:15pt;font-weight:bold;flex-direction:column}
+body.adv-review-mode{background:#525659!important}
+body.adv-review-mode #bottomNavBar{display:none!important}
+body.adv-review-mode .container{max-width:210mm!important;width:100%!important;padding:0!important;margin:15px auto!important;box-shadow:none!important;background:transparent!important;border-radius:0!important}
+body.adv-review-mode #tab-advance .adv-dashboard{display:none!important}
+body.adv-review-mode #advReviewBar{display:flex!important;position:sticky;top:10px;z-index:9999}
+body.adv-review-mode #tab-advance .adv-sheet-wrap{overflow-x:visible}
+body.adv-review-mode #tab-advance .adv-sheet{width:210mm;min-height:297mm;margin:15px auto;padding:15mm 18mm 20mm;box-shadow:0 0 20px rgba(0,0,0,.4);box-sizing:border-box}
+body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #tab-advance table.adv-prog-table td{padding:3px 5px}
+@media print{
+  #tab-advance .adv-dashboard{display:none!important}
+  #advReviewBar{display:none!important}
+  #tab-advance .adv-sheet-wrap{overflow-x:visible!important}
+  #tab-advance .adv-sheet{width:100%!important;min-width:0!important;min-height:auto!important;box-shadow:none!important;padding:0!important;margin:0!important}
+  #tab-advance table.adv-prog-table th,#tab-advance table.adv-prog-table td{padding:2px 5px}
+  #tab-advance table.adv-prog-table thead{display:table-header-group}
+  #tab-advance tr{page-break-inside:avoid}
+}
 </style>  
 </head>  
 <body>  
@@ -397,7 +464,7 @@ button:disabled {
 
     <!-- Settings Tab -->
     <div id="tab-settings" class="tab-content">
-        <h2 style="margin-top: 0; color: #6c757d;">Settings ⚙️</h2>
+        <h2 style="margin-top: 0; color: #6c757d; cursor:pointer; user-select:none;" onclick="toggleTabVisibilityPanel()">Settings ⚙️</h2>
         
         <div id="userRequestContainer" style="background:#e9ecef; padding:12px; border-radius:8px; margin-bottom:15px;">
             <h4 style="margin:0 0 5px 0; color:#007bff;">+ Request New Reason to Admin</h4>
@@ -421,6 +488,8 @@ button:disabled {
             </div>
             <button id="changePassBtn" onclick="submitPasswordChange()" style="background:#28a745; margin-top: 8px;">Update Password</button>
         </div>
+
+        <div id="tabVisibilityContainer" style="margin-top:15px; display:none;"></div>
 
         <button class="resetBtn" onclick="resetLocalData()">Reset Local Data 🔄</button>  
         <button class="logoutBtn" onclick="logout()">Logout Account 🚪</button>  
@@ -476,6 +545,188 @@ button:disabled {
             <button class="downloadBtn compact-btn" style="background:#28a745; margin-top:12px;" onclick="downloadFilteredPDF()">Download PDF 📄</button>
             <button class="downloadBtn compact-btn" style="background:#17a2b8;" onclick="downloadFilteredCSV()">Download CSV (Excel) 📊</button>
         </div>
+    </div>
+
+    <!-- Advance Programme Tab (NEW) -->
+    <div id="tab-advance" class="tab-content">
+      <div id="advLoadingOverlay">
+        <div>⏳ Processing...</div>
+        <div style="font-size:11pt;font-weight:normal;margin-top:8px;">Please wait, do not double click.</div>
+      </div>
+
+      <div class="adv-dashboard">
+        <div class="adv-dashboard-header">
+          <h2 class="adv-dashboard-title">Programme Control Dashboard</h2>
+          <div class="adv-row" style="margin:0;">
+            <div class="adv-field sm">
+              <label>Month</label>
+              <select id="advDashMonth" onchange="advOnMonthYearChange()"></select>
+            </div>
+            <div class="adv-field sm">
+              <label>Year</label>
+              <select id="advDashYear" onchange="advOnMonthYearChange()"></select>
+            </div>
+            <button class="adv-btn adv-btn-fetch" onclick="advFetchData(this)">📥 Fetch</button>
+          </div>
+        </div>
+
+        <div class="adv-row" style="background:#f8f9fa;padding:8px;border-radius:6px;margin-top:0;">
+          <div class="adv-field sm">
+            <label>Copy From Month</label>
+            <select id="advCopyMonth"></select>
+          </div>
+          <div class="adv-field sm">
+            <label>Copy From Year</label>
+            <select id="advCopyYear"></select>
+          </div>
+          <button class="adv-btn adv-btn-fetch" style="background:#6d28d9;" onclick="advCopyFromMonth()">📋 Copy as Template</button>
+        </div>
+
+        <div class="adv-row">
+          <div class="adv-field">
+            <label>Scheme</label>
+            <input type="text" id="advDashScheme" oninput="advProfileTouched=true;advSyncHeader()">
+          </div>
+        </div>
+
+        <div class="adv-row">
+          <div class="adv-field">
+            <label>Name of Meter reader</label>
+            <input type="text" id="advDashReaderName" oninput="advProfileTouched=true;advSyncHeader()">
+          </div>
+          <div class="adv-field sm">
+            <label>Initial</label>
+            <input type="text" id="advDashReaderInitial" oninput="advProfileTouched=true;advSyncHeader()">
+          </div>
+        </div>
+
+        <div class="adv-row">
+          <div class="adv-field">
+            <label>Emp No</label>
+            <input type="text" id="advDashEmpNo" oninput="advProfileTouched=true;advSyncHeader()">
+          </div>
+        </div>
+
+        <hr class="adv-divider">
+
+        <div class="adv-section-title">Daily Reading Inputs</div>
+
+        <div class="adv-row">
+          <div class="adv-field sm">
+            <label>From Date</label>
+            <select id="advDashDate" onchange="advLoadSelectedRow()"></select>
+          </div>
+          <div class="adv-field sm">
+            <label>No Days</label>
+            <select id="advDashNoDays">
+              <option value="">Select</option>
+              <option value="29">29</option>
+              <option value="30">30</option>
+              <option value="31">31</option>
+            </select>
+          </div>
+          <div class="adv-field md">
+            <label>Reading Planned</label>
+            <input type="number" id="advDashPlanned" min="0" inputmode="numeric">
+          </div>
+          <div class="adv-field sm">
+            <label>Cycle</label>
+            <select id="advDashCycle">
+              <option value="">Select</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+            </select>
+          </div>
+          <div class="adv-field md">
+            <label>Route No</label>
+            <input type="text" id="advDashRouteNo">
+          </div>
+          <div class="adv-field lg">
+            <label>Route Name</label>
+            <input type="text" id="advDashRouteName">
+          </div>
+
+          <div class="adv-btn-group">
+            <button class="adv-btn adv-btn-add" onclick="advApplyDashboardToRow()">➕ Add</button>
+            <button class="adv-btn adv-btn-clear" onclick="advClearDashboardRow()">🗑️ Clear Field</button>
+            <button class="adv-btn adv-btn-danger" onclick="advDeleteSheetRowByDate(this)">🗑️ Delete Date from Sheet</button>
+          </div>
+        </div>
+
+        <div class="adv-row" style="margin-top:12px;background:#f8f9fa;padding:8px;border-radius:6px;">
+          <div class="adv-field sm">
+            <label>To Date</label>
+            <select id="advDashToDate"></select>
+          </div>
+          <div class="adv-btn-group" style="margin-top:15px;">
+            <button class="adv-btn adv-btn-copy" onclick="advCopyRowData()">📋 Copy</button>
+            <button class="adv-btn adv-btn-move" onclick="advMoveRowData()">✂️ Move</button>
+          </div>
+        </div>
+
+        <div class="adv-action-toolbar">
+          <button class="adv-btn adv-btn-undo" onclick="advUndo()">↩️ Undo</button>
+          <button class="adv-btn adv-btn-redo" onclick="advRedo()">↪️ Redo</button>
+          <button class="adv-btn adv-btn-save" onclick="advSaveData(this)">☁️ Save</button>
+          <button class="adv-btn adv-btn-danger" onclick="advResetAll()">🗑️ Clear All</button>
+          <button class="adv-btn adv-btn-preview" onclick="advToggleReview()">👁️ Preview</button>
+          <button class="adv-btn adv-btn-pdf" onclick="advDownloadPDF(this)">📄 PDF</button>
+        </div>
+      </div>
+
+      <div id="advReviewBar">
+        <button class="adv-btn adv-btn-clear" onclick="advToggleReview()">← Back to Edit</button>
+        <button class="adv-btn adv-btn-pdf" onclick="advDownloadPDF(this)">⬇️ Download PDF</button>
+      </div>
+
+      <div class="adv-sheet-wrap">
+        <div class="adv-sheet" id="advSheetArea">
+          <div class="adv-title-block">
+            <div class="org">National Water Supply &amp; Drainage Board</div>
+            <div class="region">Batticaloa Region</div>
+            <div class="prog">Meter Reader's Advance Programme</div>
+          </div>
+
+          <div class="adv-info-line">Through: Commercial Officer (Batticaloa)</div>
+          <div class="adv-info-line">Manager (O &amp; M) - Batticaloa</div>
+
+          <div class="adv-field-row">
+            <span class="adv-label">Scheme</span>
+            <div class="adv-value-display" id="advSheetScheme"></div>
+          </div>
+          <div class="adv-field-row">
+            <span class="adv-label">Name of Meter reader</span>
+            <div class="adv-value-display" id="advSheetReaderName"></div>
+          </div>
+          <div class="adv-field-row">
+            <span class="adv-label">Meter Reader's Initial</span>
+            <div class="adv-value-display" id="advSheetReaderInitial"></div>
+          </div>
+          <div class="adv-field-row">
+            <span class="adv-label">Employee Number</span>
+            <div class="adv-value-display" id="advSheetEmpNo"></div>
+          </div>
+          <div class="adv-field-row">
+            <span class="adv-label">Year &amp; Month</span>
+            <div class="adv-value-display" id="advSheetYearMonth"></div>
+          </div>
+
+          <table class="adv-prog-table">
+            <thead>
+              <tr>
+                <th class="adv-col-compact">Day</th>
+                <th class="adv-col-compact">Date</th>
+                <th class="adv-col-compact">No<br>Days</th>
+                <th class="adv-col-compact">Number<br>of<br>Reading<br>Planned</th>
+                <th class="adv-col-compact">Cycle</th>
+                <th class="adv-col-routeno">Route No</th>
+                <th class="adv-col-routename">Route Name</th>
+              </tr>
+            </thead>
+            <tbody id="advTableBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Monthly Summary Tab (NEW) -->
@@ -588,6 +839,9 @@ button:disabled {
         <button class="nav-item" onclick="switchTab(3)" id="btn-tab-3" title="Download Data">
             <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
         </button>
+        <button class="nav-item" onclick="switchTab(5)" id="btn-tab-5" title="Advance Programme">
+            <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z"/></svg>
+        </button>
         <button class="nav-item" onclick="switchTab(4)" id="btn-tab-4" title="Monthly Summary">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
         </button>
@@ -692,6 +946,14 @@ function setFpStatus(msg, isSuccess) {
 }
 
 function switchTab(tabIndex) {
+    const TAB_INDEX_TO_ID = {1:'tab-data-enter',2:'tab-settings',3:'tab-download',4:'tab-summary',5:'tab-advance'};
+    if(typeof getHiddenTabs === 'function' && typeof TAB_VISIBILITY_CONFIG !== 'undefined'){
+        const configurableIds = TAB_VISIBILITY_CONFIG.map(c => c.key);
+        const targetId = TAB_INDEX_TO_ID[tabIndex];
+        if(configurableIds.includes(targetId) && getHiddenTabs().includes(targetId)){
+            tabIndex = 1;
+        }
+    }
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     
@@ -709,6 +971,9 @@ function switchTab(tabIndex) {
         document.getElementById('tab-summary').classList.add('active');
         document.getElementById('btn-tab-4').classList.add('active');
         if (typeof autoFillRaName === 'function' && !document.getElementById('raName').value.trim()) autoFillRaName();
+    } else if(tabIndex === 5) {
+        document.getElementById('tab-advance').classList.add('active');
+        document.getElementById('btn-tab-5').classList.add('active');
     }
 }
 
@@ -1888,8 +2153,14 @@ function initSelectors(){
 function loadRowDataToToolbar(){
  const sno=document.getElementById('fromSnoSelect').value,tr=document.querySelector(`#tableBody tr[data-sno="${sno}"]`);
  if(!tr)return;
- document.getElementById('tbArea').value=tr.querySelector('.area-col').value;
- document.getElementById('tbOrder').value=tr.querySelector('.order-col').value;
+ let area=tr.querySelector('.area-col').value;
+ let order=tr.querySelector('.order-col').value;
+ if(!area && !order && typeof advGetRouteSuggestionForSno==='function'){
+   const suggestion=advGetRouteSuggestionForSno(sno);
+   if(suggestion){ area=suggestion.routeName||''; order=suggestion.routeNo||''; }
+ }
+ document.getElementById('tbArea').value=area;
+ document.getElementById('tbOrder').value=order;
  document.getElementById('tbQty').value=tr.querySelector('.qty-col').value;
 }
 function addRowData(){
@@ -2365,6 +2636,974 @@ async function fetchDataFromGoogleSheet(){
 
 initSelectors();
 autoFillRaName();
+
+/* ===== Advance Programme Tab Module (fully namespaced, does not touch Download/Summary tab code) ===== */
+const advSCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRQJo913EVyXtMDgGzMnl7EesljnHs43g_nfBN1OJq22PIM50f2chI4GMezT_LpDCOig/exec";
+
+const advMonthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const advDayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+let advHistoryStack = [];
+let advHistoryIndex = -1;
+
+function advShowLoading(show) {
+  const overlay = document.getElementById('advLoadingOverlay');
+  if (overlay) overlay.style.display = show ? 'flex' : 'none';
+}
+
+function advSaveState(){
+  const rows = [];
+  document.querySelectorAll('#advTableBody tr').forEach(tr => rows.push(advGetRowData(tr)));
+  advHistoryStack = advHistoryStack.slice(0, advHistoryIndex + 1);
+  advHistoryStack.push(JSON.stringify(rows));
+  advHistoryIndex++;
+}
+
+function advUndo(){
+  if(advHistoryIndex > 0){
+    advHistoryIndex--;
+    advRestoreState(advHistoryStack[advHistoryIndex]);
+  }
+}
+
+function advRedo(){
+  if(advHistoryIndex < advHistoryStack.length - 1){
+    advHistoryIndex++;
+    advRestoreState(advHistoryStack[advHistoryIndex]);
+  }
+}
+
+function advRestoreState(jsonState){
+  if(!jsonState) return;
+  const rowsData = JSON.parse(jsonState);
+  const trs = document.querySelectorAll('#advTableBody tr');
+  trs.forEach((tr, idx) => {
+    if(rowsData[idx]){
+      const d = rowsData[idx];
+      tr.cells[2].textContent = d.noDays;
+      tr.cells[3].textContent = d.planned;
+      tr.cells[4].textContent = d.cycle;
+      tr.cells[5].textContent = d.routeNo;
+      tr.cells[6].textContent = d.routeName;
+    }
+  });
+  advLoadSelectedRow();
+}
+
+function advInitSelectors(){
+  const ms = document.getElementById('advDashMonth'), ys = document.getElementById('advDashYear'), now = new Date();
+  const cms = document.getElementById('advCopyMonth'), cys = document.getElementById('advCopyYear');
+  ms.innerHTML = ''; ys.innerHTML = '';
+  if(cms) cms.innerHTML = '';
+  if(cys) cys.innerHTML = '';
+
+  advMonthNames.forEach((m, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = m;
+    if(i === now.getMonth()) o.selected = true;
+    ms.appendChild(o);
+
+    if(cms){
+      const co = document.createElement('option');
+      co.value = i; co.textContent = m;
+      // Default the "copy from" month to the previous calendar month —
+      // the most common case — but the user can pick any month.
+      const prevMonthIndex = (now.getMonth() + 11) % 12;
+      if(i === prevMonthIndex) co.selected = true;
+      cms.appendChild(co);
+    }
+  });
+
+  const cy = now.getFullYear();
+  for(let y = cy - 2; y <= cy + 5; y++){
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if(y === cy) o.selected = true;
+    ys.appendChild(o);
+
+    if(cys){
+      const coy = document.createElement('option');
+      coy.value = y; coy.textContent = y;
+      const prevMonthYear = (now.getMonth() === 0) ? cy - 1 : cy;
+      if(y === prevMonthYear) coy.selected = true;
+      cys.appendChild(coy);
+    }
+  }
+
+  advSyncHeader();
+  advBuildTable();
+}
+
+function advSyncHeader(){
+  document.getElementById('advSheetScheme').textContent = document.getElementById('advDashScheme').value;
+  document.getElementById('advSheetReaderName').textContent = document.getElementById('advDashReaderName').value;
+  document.getElementById('advSheetReaderInitial').textContent = document.getElementById('advDashReaderInitial').value;
+  document.getElementById('advSheetEmpNo').textContent = document.getElementById('advDashEmpNo').value;
+
+  const mIndex = document.getElementById('advDashMonth').value;
+  const year = document.getElementById('advDashYear').value;
+  if(mIndex !== '' && year !== ''){
+    document.getElementById('advSheetYearMonth').textContent = advMonthNames[mIndex] + ' ' + year;
+  }
+}
+
+function advGetLoginUsername(){
+  try{
+    const u = JSON.parse(localStorage.getItem('currentUser'));
+    return (u && u.username) ? String(u.username).trim() : 'Guest';
+  }catch(e){
+    return 'Guest';
+  }
+}
+
+/*
+ * Runs once when the Advance Programme tab loads. Auto-fills Scheme /
+ * Name of Meter reader / Meter Reader's Initial / Employee Number for
+ * the logged-in user (instant fill from this device's cache, then a
+ * quiet confirmation from the Google Sheet), and — if nothing has been
+ * typed yet — also silently loads that user's saved day-by-day table
+ * for the currently selected Month/Year, the same as pressing the
+ * manual "📥 Fetch" button, so the table is populated automatically
+ * without requiring the user to click Fetch themselves. It never
+ * overwrites a field or row the user has already touched.
+ */
+let advProfileTouched = false;
+function advProfileFieldsEmpty(){
+  return !advDashScheme.value.trim() && !advDashReaderName.value.trim() &&
+         !advDashReaderInitial.value.trim() && !advDashEmpNo.value.trim();
+}
+function advProfileCacheKey(loginUser){
+  return 'ADV_PROFILE_' + loginUser.toLowerCase();
+}
+function advSetProfileFields(p){
+  advDashScheme.value = p.scheme || '';
+  advDashReaderName.value = p.readerName || '';
+  advDashReaderInitial.value = p.readerInitial || '';
+  advDashEmpNo.value = p.empNo || '';
+  advSyncHeader();
+}
+async function advAutoFillProfile(){
+  const loginUser = advGetLoginUsername();
+  if(!loginUser || loginUser === 'Guest') return;
+  const cacheKey = advProfileCacheKey(loginUser);
+
+  // 0) instant fill of the WHOLE table (profile + day rows) from this
+  //    device's local cache — no network wait, shows immediately.
+  try{
+    const tableCacheRaw = localStorage.getItem(advTableCacheKey(loginUser, advDashMonth.value, advDashYear.value));
+    if(tableCacheRaw && !advProfileTouched){
+      advApplyAllData(JSON.parse(tableCacheRaw));
+    }
+  }catch(e){}
+
+  // 1) instant fill from this device's cache
+  try{
+    const cachedRaw = localStorage.getItem(cacheKey);
+    if(cachedRaw && !advProfileTouched && advProfileFieldsEmpty()){
+      advSetProfileFields(JSON.parse(cachedRaw));
+    }
+  }catch(e){}
+
+  // 2) confirm with the Google Sheet in the background (data saved earlier
+  //    under this login user for the currently selected Month/Year) —
+  //    always refreshes the local cache for next time; only updates what
+  //    is on screen if the local cache above hadn't already shown data.
+  if(!advSCRIPT_URL) return;
+  try{
+    const fetchUrl = `${advSCRIPT_URL}?loginUser=${encodeURIComponent(loginUser)}&month=${encodeURIComponent(advDashMonth.value)}&year=${encodeURIComponent(advDashYear.value)}`;
+    const res = await fetch(fetchUrl, { redirect: 'follow' });
+    const text = await res.text();
+    let data;
+    try{ data = JSON.parse(text); }catch(e){ return; }
+
+    if(data && data.status !== 'empty' && data.status !== 'error'){
+      const profile = {
+        scheme: data.scheme || '',
+        readerName: data.readerName || '',
+        readerInitial: data.readerInitial || '',
+        empNo: data.empNo || ''
+      };
+      if(profile.scheme || profile.readerName || profile.readerInitial || profile.empNo){
+        localStorage.setItem(cacheKey, JSON.stringify(profile));
+      }
+      advCacheFullData(data);
+
+      if(!advProfileTouched){
+        // Nothing shown/typed yet since page load — safe to auto-load the
+        // whole saved record (profile fields + the day-by-day rows),
+        // the same way the manual "Fetch" button does.
+        advApplyAllData(data);
+      }
+    }
+  }catch(err){
+    console.warn('Advance Programme profile auto-fill failed:', err);
+  }
+}
+
+function advGetRowData(tr){
+  return {
+    noDays: tr.cells[2]?.textContent.trim() || '',
+    planned: tr.cells[3]?.textContent.trim() || '',
+    cycle: tr.cells[4]?.textContent.trim() || '',
+    routeNo: tr.cells[5]?.textContent.trim() || '',
+    routeName: tr.cells[6]?.textContent.trim() || ''
+  };
+}
+
+function advSetDashboardData(d){
+  advDashNoDays.value = d.noDays || '';
+  advDashPlanned.value = d.planned || '';
+  advDashCycle.value = d.cycle || '';
+  advDashRouteNo.value = d.routeNo || '';
+  advDashRouteName.value = d.routeName || '';
+}
+
+function advGetDashboardData(){
+  return {
+    noDays: advDashNoDays.value,
+    planned: advDashPlanned.value,
+    cycle: advDashCycle.value,
+    routeNo: advDashRouteNo.value,
+    routeName: advDashRouteName.value
+  };
+}
+
+function advFillDateSelectors(days, selected){
+  advDashDate.innerHTML = '';
+  advDashToDate.innerHTML = '';
+
+  for(let d = 1; d <= days; d++){
+    let o1 = document.createElement('option');
+    o1.value = d; o1.textContent = String(d).padStart(2, '0');
+    if(d === selected) o1.selected = true;
+    advDashDate.appendChild(o1);
+
+    let o2 = document.createElement('option');
+    o2.value = d; o2.textContent = String(d).padStart(2, '0');
+    if(d === selected) o2.selected = true;
+    advDashToDate.appendChild(o2);
+  }
+}
+
+function advLoadSelectedRow(){
+  const row = document.querySelector('#advTableBody tr[data-date-num="' + advDashDate.value + '"]');
+  advSetDashboardData(row ? advGetRowData(row) : {});
+}
+
+function advApplyDashboardToRow(){
+  const currentDay = parseInt(advDashDate.value, 10);
+  const row = document.querySelector('#advTableBody tr[data-date-num="' + currentDay + '"]');
+  if(!row) return;
+
+  const d = advGetDashboardData();
+  row.cells[2].textContent = d.noDays;
+  row.cells[3].textContent = d.planned;
+  row.cells[4].textContent = d.cycle;
+  row.cells[5].textContent = d.routeNo;
+  row.cells[6].textContent = d.routeName;
+  advSaveState();
+
+  const nextDay = currentDay + 1;
+  const nextOption = advDashDate.querySelector('option[value="' + nextDay + '"]');
+
+  if(nextOption){
+    advDashDate.value = nextDay;
+    advLoadSelectedRow();
+  } else {
+    advSetDashboardData({});
+  }
+}
+
+function advClearDashboardRow(){
+  advSetDashboardData({});
+  const currentDay = parseInt(advDashDate.value, 10);
+  const row = document.querySelector('#advTableBody tr[data-date-num="' + currentDay + '"]');
+  if(row){
+    row.cells[2].textContent = '';
+    row.cells[3].textContent = '';
+    row.cells[4].textContent = '';
+    row.cells[5].textContent = '';
+    row.cells[6].textContent = '';
+    advSaveState();
+  }
+}
+
+async function advDeleteSheetRowByDate(btnElement) {
+  const dateNum = parseInt(advDashDate.value, 10);
+  if (!dateNum) {
+    alert("Please select a date to delete!");
+    return;
+  }
+
+  if (!confirm("Are you sure you want to delete data for date " + dateNum + " from Google Sheets?")) return;
+
+  if (btnElement) btnElement.disabled = true;
+  advShowLoading(true);
+
+  try {
+    advClearDashboardRow();
+
+    const payload = {
+      action: "deleteDate",
+      loginUser: advGetLoginUsername(),
+      month: advDashMonth.value,
+      year: advDashYear.value,
+      dateNum: dateNum
+    };
+
+    if (advSCRIPT_URL) {
+      const res = await fetch(advSCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow'
+      });
+      const text = await res.text();
+      const resData = JSON.parse(text);
+
+      if (resData.status === "success") {
+        alert(resData.message || "Date entry successfully deleted from Google Sheets!");
+      } else {
+        alert("Error: " + (resData.message || "Failed to delete data."));
+      }
+    }
+  } catch (err) {
+    alert("Failed to delete date data from Google Sheets: " + err.message);
+  } finally {
+    advShowLoading(false);
+    if (btnElement) btnElement.disabled = false;
+  }
+}
+
+function advCopyRowData(){
+  const fromVal = parseInt(advDashDate.value);
+  const toVal = parseInt(advDashToDate.value);
+  const sourceRow = document.querySelector('#advTableBody tr[data-date-num="' + fromVal + '"]');
+  if(!sourceRow) return;
+
+  const data = advGetRowData(sourceRow);
+  const start = Math.min(fromVal, toVal);
+  const end = Math.max(fromVal, toVal);
+
+  for(let i = start; i <= end; i++){
+    const tr = document.querySelector('#advTableBody tr[data-date-num="' + i + '"]');
+    if(tr){
+      tr.cells[2].textContent = data.noDays;
+      tr.cells[3].textContent = data.planned;
+      tr.cells[4].textContent = data.cycle;
+      tr.cells[5].textContent = data.routeNo;
+      tr.cells[6].textContent = data.routeName;
+    }
+  }
+  advSaveState();
+}
+
+function advMoveRowData(){
+  const fromVal = parseInt(advDashDate.value);
+  const toVal = parseInt(advDashToDate.value);
+  const sourceRow = document.querySelector('#advTableBody tr[data-date-num="' + fromVal + '"]');
+  const targetRow = document.querySelector('#advTableBody tr[data-date-num="' + toVal + '"]');
+
+  if(!sourceRow || !targetRow) return;
+
+  const data = advGetRowData(sourceRow);
+
+  targetRow.cells[2].textContent = data.noDays;
+  targetRow.cells[3].textContent = data.planned;
+  targetRow.cells[4].textContent = data.cycle;
+  targetRow.cells[5].textContent = data.routeNo;
+  targetRow.cells[6].textContent = data.routeName;
+
+  sourceRow.cells[2].textContent = '';
+  sourceRow.cells[3].textContent = '';
+  sourceRow.cells[4].textContent = '';
+  sourceRow.cells[5].textContent = '';
+  sourceRow.cells[6].textContent = '';
+
+  advSaveState();
+}
+
+function advCollectAllData(){
+  const data = {
+    action: "save",
+    scheme: advDashScheme.value,
+    readerName: advDashReaderName.value,
+    readerInitial: advDashReaderInitial.value,
+    empNo: advDashEmpNo.value,
+    month: advDashMonth.value,
+    year: advDashYear.value,
+    loginUser: advGetLoginUsername(),
+    lastUpdated: new Date().toLocaleString(),
+    rows: []
+  };
+  document.querySelectorAll('#advTableBody tr').forEach(tr => data.rows.push(advGetRowData(tr)));
+  return data;
+}
+
+function advTableCacheKey(loginUser, month, year){
+  return 'ADV_TABLE_' + loginUser.toLowerCase() + '_' + year + '_' + month;
+}
+
+function advCacheFullData(dataObj){
+  try{
+    if(!dataObj || dataObj.month === undefined || dataObj.year === undefined) return;
+    const loginUser = advGetLoginUsername();
+    if(!loginUser || loginUser === 'Guest') return;
+    localStorage.setItem(advTableCacheKey(loginUser, dataObj.month, dataObj.year), JSON.stringify(dataObj));
+  }catch(e){}
+}
+
+function advApplyAllData(data){
+  let profileFallback = {};
+  try{
+    const cachedLoginUser = advGetLoginUsername();
+    if(cachedLoginUser && cachedLoginUser !== 'Guest'){
+      const cachedRaw = localStorage.getItem(advProfileCacheKey(cachedLoginUser));
+      if(cachedRaw) profileFallback = JSON.parse(cachedRaw);
+    }
+  }catch(e){}
+
+  advDashScheme.value = data.scheme || profileFallback.scheme || '';
+  advDashReaderName.value = data.readerName || profileFallback.readerName || '';
+  advDashReaderInitial.value = data.readerInitial || profileFallback.readerInitial || '';
+  advDashEmpNo.value = data.empNo || profileFallback.empNo || '';
+  if(data.month !== undefined) advDashMonth.value = data.month;
+  if(data.year !== undefined) advDashYear.value = data.year;
+
+  advProfileTouched = true;
+  try{
+    const loginUser = advGetLoginUsername();
+    if(loginUser && loginUser !== 'Guest'){
+      localStorage.setItem(advProfileCacheKey(loginUser), JSON.stringify({
+        scheme: advDashScheme.value,
+        readerName: advDashReaderName.value,
+        readerInitial: advDashReaderInitial.value,
+        empNo: advDashEmpNo.value
+      }));
+    }
+  }catch(e){}
+  advCacheFullData(data);
+
+  advSyncHeader();
+  advBuildTable();
+
+  if(data.rows && data.rows.length){
+    advRestoreState(JSON.stringify(data.rows));
+  }
+}
+
+/*
+ * Looks up Advance Programme's Route No / Route Name for a given Serial
+ * NO (day number), but only returns it as a suggestion — it never writes
+ * to the Summary table directly. It is used to prefill the "From S.NO"
+ * toolbar (Area / Work Order fields) so the user can see it, type the
+ * Qty themselves, and press "Add" to commit it, exactly like adding any
+ * other row. Only suggests when both tabs are on the same Month/Year.
+ */
+function advGetRouteSuggestionForSno(sno){
+  try{
+    const sMonthSel = document.getElementById('monthSelect');
+    const sYearSel = document.getElementById('yearSelect');
+    if(!sMonthSel || !sYearSel) return null;
+    if(sMonthSel.value !== advDashMonth.value || sYearSel.value !== advDashYear.value) return null;
+
+    const dayNum = parseInt(sno, 10);
+    const advTr = document.querySelector(`#advTableBody tr[data-date-num="${dayNum}"]`);
+    if(!advTr) return null;
+
+    const routeNo = advTr.cells[5] ? advTr.cells[5].textContent.trim() : '';
+    const routeName = advTr.cells[6] ? advTr.cells[6].textContent.trim() : '';
+    if(!routeNo && !routeName) return null;
+
+    return { routeNo, routeName };
+  }catch(e){
+    return null;
+  }
+}
+
+/*
+ * "Advance Programme Import" button (Monthly Summary tab): copies Route
+ * Name -> Area and Route No -> Work Order for every day that has data in
+ * Advance Programme, matched by day number = Serial NO. Only fills rows
+ * that are currently empty in Summary (never overwrites what the user
+ * already typed). Qty is always left blank for manual entry. This is a
+ * one-time, user-triggered action — it does not touch Save, Fetch or
+ * Download PDF in either tab.
+ */
+async function advSaveData(btnElement){
+  if(btnElement) btnElement.disabled = true;
+  advShowLoading(true);
+
+  try {
+    const data = advCollectAllData();
+
+    if(!advSCRIPT_URL){
+      alert('Google Apps Script URL சரியாக அமைக்கப்படவில்லை!');
+      return;
+    }
+
+    const res = await fetch(advSCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data),
+      redirect: 'follow'
+    });
+
+    const text = await res.text();
+    let resData;
+    try {
+      resData = JSON.parse(text);
+    } catch(e) {
+      throw new Error("Google Apps Script பதிலில் பிழை உள்ளது. Deployment அமைப்புகளைச் சரிபார்க்கவும்.");
+    }
+
+    if(resData.status === "success"){
+      try{
+        const loginUser = advGetLoginUsername();
+        if(loginUser && loginUser !== 'Guest'){
+          localStorage.setItem(advProfileCacheKey(loginUser), JSON.stringify({
+            scheme: advDashScheme.value,
+            readerName: advDashReaderName.value,
+            readerInitial: advDashReaderInitial.value,
+            empNo: advDashEmpNo.value
+          }));
+        }
+      }catch(e){}
+      advCacheFullData(data);
+      alert('தரவு கூகுள் சீட்டில் வெற்றிகரமாக சேமிக்கப்பட்டது!');
+    } else {
+      alert('Error: ' + (resData.message || 'Failed to save to Google Sheets.'));
+    }
+  }catch(err){
+    alert('Google Sheets சேமிப்பில் பிழை ஏற்பட்டது: ' + err.message);
+  }finally{
+    advShowLoading(false);
+    if(btnElement) btnElement.disabled = false;
+  }
+}
+
+async function advFetchData(btnElement){
+  if(btnElement) btnElement.disabled = true;
+  advShowLoading(true);
+
+  try{
+    if(!advSCRIPT_URL){
+      alert('Invalid SCRIPT_URL configured.');
+      return;
+    }
+
+    const loginUser = advGetLoginUsername();
+    const month = advDashMonth.value;
+    const year = advDashYear.value;
+
+    const fetchUrl = `${advSCRIPT_URL}?loginUser=${encodeURIComponent(loginUser)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`;
+    const res = await fetch(fetchUrl, { redirect: 'follow' });
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      throw new Error("Google Apps Script பதிலில் பிழை உள்ளது. Deployment அமைப்புகளைச் சரிபார்க்கவும்.");
+    }
+
+    if(data && data.status !== "empty" && data.status !== "error"){
+      advApplyAllData(data);
+      alert('Data fetched successfully from Google Sheets!');
+    } else {
+      alert(data.message || 'No data found in Google Sheets.');
+    }
+  }catch(err){
+    alert('Failed to fetch data from Google Sheets: ' + err.message);
+  }finally{
+    advShowLoading(false);
+    if(btnElement) btnElement.disabled = false;
+  }
+}
+
+function advResetAll(){
+  if(!confirm('Are you sure you want to clear all data?')) return;
+
+  advDashScheme.value = '';
+  advDashReaderName.value = '';
+  advDashReaderInitial.value = '';
+  advDashEmpNo.value = '';
+
+  advSyncHeader();
+
+  document.querySelectorAll('#advTableBody td').forEach((td, idx) => {
+    if(idx % 7 >= 2) td.textContent = '';
+  });
+
+  advSetDashboardData({});
+  advSaveState();
+  advLoadSelectedRow();
+}
+
+function advBuildTable(){
+  const month = parseInt(advDashMonth.value), year = parseInt(advDashYear.value), saved = {};
+  document.querySelectorAll('#advTableBody tr[data-date]').forEach(tr => saved[tr.getAttribute('data-date')] = advGetRowData(tr));
+
+  const days = new Date(year, month + 1, 0).getDate();
+  let selected = parseInt(advDashDate?.value || '1');
+  if(!selected || selected > days) selected = days;
+
+  advTableBody.innerHTML = '';
+  for(let d = 1; d <= days; d++){
+    const day = advDayNames[new Date(year, month, d).getDay()];
+    const date = d.toString().padStart(2, '0');
+    const key = year + '-' + month + '-' + d;
+    const s = saved[key] || {};
+
+    const tr = document.createElement('tr');
+    tr.dataset.date = key;
+    tr.dataset.dateNum = d;
+    tr.innerHTML = '<td class="adv-col-compact" style="text-align:left;padding-left:6px;font-weight:bold;">' + day + '</td>' +
+                 '<td class="adv-col-compact">' + date + '</td>' +
+                 '<td class="adv-col-compact">' + (s.noDays || '') + '</td>' +
+                 '<td class="adv-col-compact">' + (s.planned || '') + '</td>' +
+                 '<td class="adv-col-compact">' + (s.cycle || '') + '</td>' +
+                 '<td class="adv-route-no-col">' + (s.routeNo || '') + '</td>' +
+                 '<td class="adv-route-name-col">' + (s.routeName || '') + '</td>';
+    advTableBody.appendChild(tr);
+  }
+  advFillDateSelectors(days, selected);
+  advLoadSelectedRow();
+  advSaveState();
+}
+
+/*
+ * Runs whenever Month or Year is changed in Advance Programme: rebuilds
+ * the table for that month first (so the UI updates immediately), then
+ * loads that month's saved data for the logged-in user — first instantly
+ * from this device's local cache, then confirms/refreshes from the
+ * Google Sheet in the background — exactly like the manual "📥 Fetch"
+ * button, but automatic. If the user switches month/year again before
+ * the background fetch finishes, the stale result is discarded so it
+ * never gets applied to the wrong month.
+ */
+/*
+ * "📋 Copy as Template": lets the user pull another month's saved
+ * day-by-day data (Route No/Route Name/Cycle/Planned) into the CURRENTLY
+ * selected month's table, so they don't have to retype everything from
+ * scratch every month — they only edit/delete the days that changed and
+ * press Save. The target Month/Year selection is never changed by this;
+ * only the table rows are replaced.
+ */
+async function advCopyFromMonth(){
+  const loginUser = advGetLoginUsername();
+  if(!loginUser || loginUser === 'Guest'){
+    alert('Please log in first.');
+    return;
+  }
+
+  const sourceMonth = advCopyMonth.value, sourceYear = advCopyYear.value;
+  const targetMonth = advDashMonth.value, targetYear = advDashYear.value;
+
+  if(sourceMonth === targetMonth && sourceYear === targetYear){
+    alert('Pick a different month in "Copy From" to copy.');
+    return;
+  }
+
+  const sourceLabel = `${advMonthNames[sourceMonth]} ${sourceYear}`;
+  const targetLabel = `${advMonthNames[targetMonth]} ${targetYear}`;
+  if(!confirm(`Copy data from ${sourceLabel} to ${targetLabel}?`)) return;
+
+  advShowLoading(true);
+  try{
+    let sourceData = null;
+
+    try{
+      const cacheRaw = localStorage.getItem(advTableCacheKey(loginUser, sourceMonth, sourceYear));
+      if(cacheRaw) sourceData = JSON.parse(cacheRaw);
+    }catch(e){}
+
+    if(!sourceData){
+      if(!advSCRIPT_URL) throw new Error('Google Apps Script URL is not configured.');
+      const fetchUrl = `${advSCRIPT_URL}?loginUser=${encodeURIComponent(loginUser)}&month=${encodeURIComponent(sourceMonth)}&year=${encodeURIComponent(sourceYear)}`;
+      const res = await fetch(fetchUrl, { redirect: 'follow' });
+      const text = await res.text();
+      let data;
+      try{ data = JSON.parse(text); }
+      catch(e){ throw new Error('Invalid response from Google Apps Script. Please check the deployment settings.'); }
+
+      if(!data || data.status === 'empty' || data.status === 'error'){
+        alert(`No saved data found for ${sourceLabel}.`);
+        return;
+      }
+      sourceData = data;
+    }
+
+    if(!sourceData.rows || !sourceData.rows.length){
+      alert(`No route data found for ${sourceLabel}.`);
+      return;
+    }
+
+    advRestoreState(JSON.stringify(sourceData.rows));
+    advLoadSelectedRow();
+
+  }catch(err){
+    alert('Copy failed: ' + (err && err.message ? err.message : err));
+  }finally{
+    advShowLoading(false);
+  }
+}
+
+async function advOnMonthYearChange(){
+  advSyncHeader();
+  advBuildTable();
+
+  const loginUser = advGetLoginUsername();
+  if(!loginUser || loginUser === 'Guest') return;
+
+  const requestMonth = advDashMonth.value;
+  const requestYear = advDashYear.value;
+
+  // Instant local-cache fill for this month/year.
+  try{
+    const cacheRaw = localStorage.getItem(advTableCacheKey(loginUser, requestMonth, requestYear));
+    if(cacheRaw){
+      const cached = JSON.parse(cacheRaw);
+      if(advDashMonth.value === requestMonth && advDashYear.value === requestYear){
+        advApplyAllData(cached);
+      }
+    }
+  }catch(e){}
+
+  // Background confirmation/refresh from the Google Sheet.
+  if(!advSCRIPT_URL) return;
+  try{
+    const fetchUrl = `${advSCRIPT_URL}?loginUser=${encodeURIComponent(loginUser)}&month=${encodeURIComponent(requestMonth)}&year=${encodeURIComponent(requestYear)}`;
+    const res = await fetch(fetchUrl, { redirect: 'follow' });
+    const text = await res.text();
+    let data;
+    try{ data = JSON.parse(text); }catch(e){ return; }
+
+    if(data && data.status !== 'empty' && data.status !== 'error'){
+      advCacheFullData(data);
+      // Only apply if the user hasn't switched to a different month/year
+      // again while this request was in flight.
+      if(advDashMonth.value === requestMonth && advDashYear.value === requestYear){
+        advApplyAllData(data);
+      }
+    }
+  }catch(err){
+    console.warn('Advance Programme month/year auto-load failed:', err);
+  }
+}
+
+function advToggleReview(){
+  document.body.classList.toggle('adv-review-mode');
+  if(document.body.classList.contains('adv-review-mode')){
+    window.scrollTo(0,0);
+  }
+}
+
+/*
+ * Built the same way as buildSummaryExportCanvas() in the Monthly Summary
+ * tab: instead of asking html2pdf to screenshot the live, on-screen sheet
+ * (which sits inside the app's centered mobile layout and picks up extra
+ * space around it), we clone just the sheet into a hidden, off-screen
+ * element that is forced to an exact 210mm x 297mm A4 box, capture THAT
+ * with html2canvas at matching pixel dimensions, and then drop the
+ * resulting image into a jsPDF page at exactly (0,0,210,297). Because the
+ * captured box and the PDF page are the same fixed size, there is no
+ * auto-centering/letterboxing and no stray top margin - it always fills
+ * one page. The on-screen sheet itself is never modified.
+ */
+async function advBuildExportCanvas(){
+  const source = document.getElementById('advSheetArea');
+  if(typeof window.html2canvas !== 'function'){
+    throw new Error('html2canvas library did not load. Please check internet connection.');
+  }
+
+  let exportPage = null;
+  let exportStyle = null;
+
+  try{
+    exportPage = source.cloneNode(true);
+    exportPage.removeAttribute('id');
+    exportPage.id = 'advPdfExportPage';
+    // Avoid duplicate ids while the clone is briefly in the live DOM.
+    exportPage.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+    exportStyle = document.createElement('style');
+    exportStyle.id = 'advPdfExportStyle';
+    exportStyle.textContent = `
+      #advPdfExportPage{
+        width:210mm !important;
+        height:297mm !important;
+        min-height:297mm !important;
+        max-width:none !important;
+        min-width:0 !important;
+        margin:0 !important;
+        padding:15mm 18mm 20mm !important;
+        background:#fff !important;
+        box-shadow:none !important;
+        border-radius:0 !important;
+        overflow:hidden !important;
+        box-sizing:border-box !important;
+        font-family:'Times New Roman',Times,serif !important;
+      }
+      #advPdfExportPage table.adv-prog-table{ min-width:0 !important; width:100% !important; }
+      #advPdfExportPage .adv-field-row{ max-width:60% !important; }
+    `;
+    document.head.appendChild(exportStyle);
+
+    exportPage.style.position = 'absolute';
+    exportPage.style.left = '-10000px';
+    exportPage.style.top = '0';
+    exportPage.style.display = 'block';
+
+    document.getElementById('tab-advance').appendChild(exportPage);
+
+    // Let the browser apply the exact A4 layout before capturing.
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    const canvas = await window.html2canvas(exportPage, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      backgroundColor: '#ffffff',
+      width: Math.ceil(exportPage.getBoundingClientRect().width),
+      height: Math.ceil(exportPage.getBoundingClientRect().height),
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: Math.ceil(exportPage.getBoundingClientRect().width),
+      windowHeight: Math.ceil(exportPage.getBoundingClientRect().height)
+    });
+
+    return canvas;
+
+  } finally {
+    if(exportPage && exportPage.parentNode) exportPage.parentNode.removeChild(exportPage);
+    if(exportStyle && exportStyle.parentNode) exportStyle.parentNode.removeChild(exportStyle);
+  }
+}
+
+async function advDownloadPDF(btnElement){
+  if(btnElement) btnElement.disabled = true;
+  advShowLoading(true);
+
+  try {
+    if(!window.jspdf || typeof window.jspdf.jsPDF !== 'function'){
+      throw new Error('jsPDF library did not load. Please check internet connection.');
+    }
+
+    const canvas = await advBuildExportCanvas();
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+    const PDF = window.jspdf.jsPDF;
+    const pdf = new PDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+
+    // Exact A4 placement: no automatic aspect-ratio resizing or margins.
+    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+
+    const safeName = (advDashReaderName.value || 'Report')
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .replace(/\s+/g, '_');
+
+    pdf.save(`Meter_Reader_Programme_${safeName}.pdf`);
+
+  } catch(err) {
+    alert('PDF உருவாக்குவதில் பிழை ஏற்பட்டது: ' + (err && err.message ? err.message : err));
+  } finally {
+    advShowLoading(false);
+    if(btnElement) btnElement.disabled = false;
+  }
+}
+
+/*
+ * Tab Visibility (Settings tab): lets the user hide/show the optional
+ * Download / Advance Programme / Monthly Summary tabs from the bottom
+ * menu. "Remove" only hides the nav button (and falls back to the Data
+ * Enter tab if it was active) — it never deletes any data. "Add" brings
+ * it back. State is stored locally per device.
+ */
+const TAB_VISIBILITY_CONFIG = [
+  { key: 'tab-advance', btnId: 'btn-tab-5', label: 'Advance Programme 📋' },
+  { key: 'tab-summary', btnId: 'btn-tab-4', label: 'Monthly Summary 📊' }
+];
+
+function getHiddenTabs(){
+  try{
+    const raw = localStorage.getItem('HIDDEN_TABS');
+    if(raw === null){
+      // First run on this device: start with only Home + Settings visible.
+      return TAB_VISIBILITY_CONFIG.map(c => c.key);
+    }
+    return JSON.parse(raw);
+  }catch(e){
+    return TAB_VISIBILITY_CONFIG.map(c => c.key);
+  }
+}
+
+function saveHiddenTabs(arr){
+  try{ localStorage.setItem('HIDDEN_TABS', JSON.stringify(arr)); }catch(e){}
+}
+
+function applyTabVisibility(){
+  const hidden = getHiddenTabs();
+  TAB_VISIBILITY_CONFIG.forEach(cfg => {
+    const btn = document.getElementById(cfg.btnId);
+    if(btn) btn.style.display = hidden.includes(cfg.key) ? 'none' : '';
+  });
+  const activeContent = document.querySelector('.tab-content.active');
+  if(activeContent && hidden.includes(activeContent.id) && typeof switchTab === 'function'){
+    switchTab(1);
+  }
+}
+
+function setTabVisibility(tabKey, visible){
+  let hidden = getHiddenTabs();
+  if(visible){
+    hidden = hidden.filter(k => k !== tabKey);
+  } else if(!hidden.includes(tabKey)){
+    hidden.push(tabKey);
+  }
+  saveHiddenTabs(hidden);
+  applyTabVisibility();
+  renderTabVisibilityControls();
+}
+
+function renderTabVisibilityControls(){
+  const container = document.getElementById('tabVisibilityContainer');
+  if(!container) return;
+  const hidden = getHiddenTabs();
+  container.innerHTML = TAB_VISIBILITY_CONFIG.map(cfg => {
+    const isHidden = hidden.includes(cfg.key);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #e5e7eb;">
+      <div>
+        <div style="font-weight:bold;font-size:13px;color:#333;">${cfg.label}</div>
+        <div style="font-size:11px;color:${isHidden ? '#c53030' : '#28a745'};">${isHidden ? 'Hidden' : 'Visible'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button type="button" class="compact-btn" style="background:#28a745;${isHidden ? '' : 'display:none;'}" onclick="setTabVisibility('${cfg.key}', true)">➕ Add</button>
+        <button type="button" class="compact-btn" style="background:#c53030;${isHidden ? 'display:none;' : ''}" onclick="setTabVisibility('${cfg.key}', false)">🗑️ Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTabVisibilityPanel(){
+  const container = document.getElementById('tabVisibilityContainer');
+  if(!container) return;
+  container.style.display = (container.style.display === 'none') ? 'block' : 'none';
+}
+
+try{
+  const rawHidden = localStorage.getItem('HIDDEN_TABS');
+  if(rawHidden !== null){
+    const parsedHidden = JSON.parse(rawHidden).filter(k => k !== 'tab-download');
+    localStorage.setItem('HIDDEN_TABS', JSON.stringify(parsedHidden));
+  }
+}catch(e){}
+
+renderTabVisibilityControls();
+applyTabVisibility();
+
+advInitSelectors();
+advAutoFillProfile();
 </script>
 </body>  
 </html>
