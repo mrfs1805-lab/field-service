@@ -1044,8 +1044,6 @@ function login(){
             loadReasons(false);
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
-            // Auto-sync pending data right after a fresh login (same as page refresh)
-            setTimeout(() => { updateStatistics(); syncQueue(); }, 1500);
         } else {   
             document.getElementById("loginStatus").innerText = data.message || "Invalid Login ❌";   
         }   
@@ -2294,10 +2292,6 @@ if (cachedUser && cachedUser.username) {
     showApp();  
     setTimeout(() => { updateStatistics(); syncQueue(); }, 1500);   
 }  
-// Auto-sync when internet comes back
-window.addEventListener('online', () => {
-    if (safeJSONParse(localStorage.getItem("currentUser"), null)) syncQueue();
-});
 </script>  
 
 <!-- ===== Monthly Summary Module Script (Sierra Engineering) ===== -->
