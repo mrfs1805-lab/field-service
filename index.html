@@ -1041,7 +1041,6 @@ function login(){
         if(isSuccess) {   
             let today = getLocalDateString();  
             localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today }));   
-            loadReasons(false);
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
         } else {   
@@ -1186,6 +1185,10 @@ function showApp(){
     
     loadAssistants();  
     renderReasonsDropdown();         
+    // Always pull the latest Reasons from the Google Sheet automatically
+    // (fresh login, page refresh or returning with a saved session) - no
+    // need to press "Refresh Reasons".
+    autoRefreshReasons(true);
 
     let todayStr = getLocalDateString();  
     document.getElementById("date").value = todayStr;  
@@ -2203,6 +2206,27 @@ function autoSyncIfNeeded() {
     if (!u || !u.username) return;
     syncQueue();
 }
+// ===== Auto-refresh Reasons from the Google Sheet (no manual button needed) =====
+let LAST_REASONS_FETCH = 0;
+let REASONS_FETCHING = false;
+function autoRefreshReasons(force) {
+    if (REASONS_FETCHING) return;
+    if (!navigator.onLine) return;
+    let u = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if (!u || !u.username) return;
+    if (!force && Date.now() - LAST_REASONS_FETCH < 5 * 60 * 1000) return;
+    REASONS_FETCHING = true;
+    LAST_REASONS_FETCH = Date.now();
+    Promise.resolve(loadReasons(false))
+        .catch(() => {})
+        .finally(() => { REASONS_FETCHING = false; });
+}
+window.addEventListener("online", () => setTimeout(() => autoRefreshReasons(true), 1500));
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") autoRefreshReasons(false);
+});
+setInterval(() => autoRefreshReasons(false), 5 * 60 * 1000);
+
 // 1) Browser reports connection restored (small delay so the connection stabilises)
 window.addEventListener("online", () => setTimeout(autoSyncIfNeeded, 1500));
 // 2) App comes back to foreground (common on mobile)
