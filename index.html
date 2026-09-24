@@ -420,7 +420,8 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         </div>
 
         <input id="account" placeholder="57/09/301/001/10" inputmode="numeric">  
-        <select id="reason"></select>  
+        <select id="reasonCategory" onchange="handleReasonCategoryChange()" style="margin-top:6px;"></select>
+        <select id="reason" style="margin-top:6px;"></select>  
         <button class="refreshBtn compact-btn" onclick="loadReasons(true)">Refresh Reasons 🔄</button>
         
         <input type="date" id="date">  
@@ -468,6 +469,10 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         
         <div id="userRequestContainer" style="background:#e9ecef; padding:12px; border-radius:8px; margin-bottom:15px;">
             <h4 style="margin:0 0 5px 0; color:#007bff;">+ Request New Reason to Admin</h4>
+            <select id="userRequestedCategory" onchange="handleRequestCategoryChange()">
+                <option value="" disabled selected hidden>Select Title / Category</option>
+            </select>
+            <input id="userRequestedNewCategory" placeholder="Type new title/category name..." style="display:none;">
             <input id="userRequestedReason" placeholder="Type new reason here...">
             <button id="sendRequestBtn" class="compact-btn" onclick="submitReasonRequest()" style="background:#6c757d; color:white; margin: 4px 0 0 0;">Send Request ✉️</button>
         </div>
@@ -504,7 +509,11 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
             
             <div class="filter-grid">
                 <input id="filterAccount" placeholder="Filter by Account Number..." oninput="handleFilterInputClear()">
-                
+
+                <select id="filterCategory" onchange="handleFilterCategoryChange()">
+                    <option value="">All Titles</option>
+                </select>
+
                 <select id="filterReason" onchange="handleFilterInputClear()">
                     <option value="">All Reasons</option>
                 </select>
@@ -872,7 +881,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 <script> 
 const DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
 const ADMIN_DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
-const REASONS_URL = "https://script.google.com/macros/s/AKfycbyTlh5n5yzPy9i3HnvJxnWfddexCz33rRitPQntBfJ4YfaJVLHNLiRgOmmqeSJ6xo75qQ/exec";
+const REASONS_URL = "https://script.google.com/macros/s/AKfycbxns_HddvoowgsRrSsSOqDeDZ7ObHpMMihmxb4OewUDTDlOQhV3pDUPNJkSGYv7WQsVwg/exec";
 const USER_MANAGEMENT_URL = "https://script.google.com/macros/s/AKfycbwhktmEgW_3CFN203f3n2IEjGLgQnQR_ZxbC_PrricRfePspfwNGfiv5KS7dEO5ut1t/exec";
 const REQUESTS_URL = "https://script.google.com/macros/s/AKfycbyu-CjSxeNmLLKnS1qAbV8R3ZuG94pEnlFhtSbSk0YOW-6zJBerVTlDe44bENChKZcmyQ/exec";
 
@@ -898,13 +907,15 @@ let currentLogFilter = 'all';
 let currentEditingItemIdentifier = null;
 
 let REASONS = safeJSONParse(localStorage.getItem("REASONS"), [
-    "01. Meter rising",
-    "02. Vacant Land",
-    "03. Repeated Gate Closed",
-    "04. System does not show Dc",
-    "05. New Connection",
-    "06. Reconnection"
+    { category: "General", reason: "Meter rising" },
+    { category: "General", reason: "Vacant Land" },
+    { category: "General", reason: "Repeated Gate Closed" },
+    { category: "General", reason: "System does not show Dc" },
+    { category: "General", reason: "New Connection" },
+    { category: "General", reason: "Reconnection" }
 ]);
+// Migrate any old flat string-based cached reasons to the {category, reason} format
+REASONS = (REASONS || []).map(r => (typeof r === "string") ? { category: "General", reason: r } : r);
 
 function getLocalDateString() {
     let d = new Date();
@@ -922,6 +933,39 @@ function getTimeString() {
 
 function saveReasons(){
     localStorage.setItem("REASONS", JSON.stringify(REASONS));
+}
+
+// Group a flat/mixed REASONS list into [{category, reasons:[...]}] preserving first-seen order
+function groupReasons(list){
+    let map = {}, order = [];
+    (list || []).forEach(r => {
+        let raw = (typeof r === "string") ? { category: "General", reason: r } : (r || {});
+        let cat = (raw.category || "General").toString().trim() || "General";
+        let reason = (raw.reason || "").toString().trim();
+        if (!reason) return;
+        if (!map[cat]) { map[cat] = []; order.push(cat); }
+        map[cat].push(reason);
+    });
+    return order.map(cat => ({ category: cat, reasons: map[cat] }));
+}
+
+function escapeHtml(s){
+    return (s || "").toString().replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+// Builds <optgroup> grouped <option> HTML for a reason <select>, so reasons
+// are shown under their category heading (e.g. Zero Consumption, Meter shifting).
+function buildReasonOptionsHTML(placeholder){
+    let groups = groupReasons(REASONS);
+    let html = `<option value="" disabled selected hidden>${escapeHtml(placeholder)}</option>`;
+    groups.forEach(g => {
+        html += `<optgroup label="${escapeHtml(g.category)}">`;
+        g.reasons.forEach(r => {
+            html += `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`;
+        });
+        html += `</optgroup>`;
+    });
+    return html;
 }
 
 function togglePasswordVisibility(id) {
@@ -1000,6 +1044,8 @@ function login(){
             loadReasons(false);
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
+            // Auto-sync pending data right after a fresh login (same as page refresh)
+            setTimeout(() => { updateStatistics(); syncQueue(); }, 1500);
         } else {   
             document.getElementById("loginStatus").innerText = data.message || "Invalid Login ❌";   
         }   
@@ -1155,14 +1201,22 @@ function showApp(){
     
     loadPrefixes();
     checkLiveReset();
-    fetchUserLiveSheetData(); 
+    let livePromise = fetchUserLiveSheetData(); 
 
     // Advance Programme tab's selectors are built once at page load, before
     // login (when the user is still "Guest"), so its auto-load silently does
     // nothing then. Trigger it again now that the real logged-in user is
     // known, so the Advance Programme data loads right after login instead
     // of only appearing after the page is refreshed.
-    if (typeof advAutoFillProfile === 'function') advAutoFillProfile();
+    // PERFORMANCE: Reasons + Live status are fetched FIRST. The Advance
+    // Programme request waits until both finish (max 6s), so the Google
+    // Apps Script servers are not hit by many requests at the same time.
+    Promise.race([
+        Promise.allSettled([window.REASONS_PROMISE, livePromise]),
+        new Promise(r => setTimeout(r, 6000))
+    ]).then(() => {
+        if (typeof advAutoFillProfile === 'function') advAutoFillProfile();
+    });
 
     if (!userAutoRequestInterval) {
         userAutoRequestInterval = setInterval(() => {
@@ -1479,21 +1533,33 @@ function submitReasonRequest() {
     let user = safeJSONParse(localStorage.getItem("currentUser"), null);
     if(!user || !user.username) return;
 
+    let catSel = document.getElementById("userRequestedCategory");
+    let newCatInput = document.getElementById("userRequestedNewCategory");
     let reqInput = document.getElementById("userRequestedReason");
+
+    let category = catSel.value === "__NEW__" ? newCatInput.value.trim() : catSel.value;
     let reqReason = reqInput.value.trim();
+
+    if(!category) { alert("Please select a title/category! ❌"); return; }
     if(!reqReason) { alert("Please enter a reason! ❌"); return; }
-    
+
+    let requestPayload = `[NEW_REASON]|CATEGORY:${category}|REASON:${reqReason}`;
+
     let sendBtn = document.getElementById("sendRequestBtn");
     sendBtn.disabled = true;
     sendBtn.innerText = "Sending... ⏳";
     
     fetch(REQUESTS_URL, {
         method: "POST",
-        body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: reqReason })
+        body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: requestPayload })
     })
     .then(() => {
         alert("Request sent successfully to Admin! ✉️✅");
-        reqInput.value = ""; 
+        reqInput.value = "";
+        catSel.value = "";
+        catSel.selectedIndex = 0;
+        newCatInput.value = "";
+        newCatInput.style.display = "none";
     })
     .catch(() => alert("Failed to send request. ❌"))
     .finally(() => {
@@ -1505,21 +1571,121 @@ function submitReasonRequest() {
 function loadReasons(showAlert = false){  
     if(showAlert) setStatus("Refreshing reasons... ⏳");
 
-    fetch(REASONS_URL + "?action=getReasons")  
-    .then(res => res.text())  
-    .then(text => {  
-        let data = safeJSONParse(text, null);
-        if(data && Array.isArray(data.reasons) && data.reasons.length > 0) {  
-            REASONS = data.reasons;  
-            saveReasons();  
-            renderReasonsDropdown();
-            if(showAlert) setStatus(`Reasons updated successfully! ✅`);
-        } else {
-            if(showAlert) setStatus("Failed to fetch new reasons ❌");
-        }
-    }).catch(() => { 
-        if(showAlert) setStatus("Network error! ⚠️"); 
-    });  
+    const tryFetch = (attempt) => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 25000);
+        return fetch(REASONS_URL + "?action=getReasons&_t=" + Date.now(), { redirect: "follow", signal: ctrl.signal })
+        .then(res => res.text().then(text => ({ ok: res.ok, status: res.status, text })))
+        .then(r => {
+            clearTimeout(timer);
+            let data = safeJSONParse(r.text, null);
+            if(data && Array.isArray(data.reasons) && data.reasons.length > 0) {  
+                REASONS = data.reasons.map(x => (typeof x === "string") ? { category: "General", reason: x } : x);  
+                saveReasons();  
+                renderReasonsDropdown();
+                if(showAlert) setStatus("Reasons updated successfully! ✅");
+                return true;
+            }
+            // Failure: retry once, then show the real cause
+            if(attempt < 2) return tryFetch(attempt + 1);
+            let why = !data ? ("Server returned non-JSON (HTTP " + r.status + "): " + r.text.replace(/<[^>]*>/g, " ").trim().slice(0, 90))
+                            : (data.message ? data.message : "No reasons in response");
+            console.error("Reasons fetch failed:", r.text.slice(0, 300));
+            if(showAlert) setStatus("Failed to fetch new reasons ❌ — " + why);
+            return false;
+        })
+        .catch(err => {
+            clearTimeout(timer);
+            if(attempt < 2) return tryFetch(attempt + 1);
+            if(showAlert) setStatus("Network error! ⚠️ " + (err && err.name === "AbortError" ? "(timeout)" : ""));
+            return false;
+        });
+    };
+
+    window.REASONS_PROMISE = tryFetch(1);
+    return window.REASONS_PROMISE;
+}
+
+// Populates the "Select Title / Category" dropdown in the Settings ->
+// "Request New Reason to Admin" box, using the categories/titles that
+// already exist (e.g. Zero Consumption, Meter shifting), plus an
+// "Other (New Title)" option so the user can type a brand-new category.
+function renderRequestCategoryDropdown() {
+    let sel = document.getElementById("userRequestedCategory");
+    if (!sel) return;
+    let groups = groupReasons(REASONS);
+    let html = `<option value="" disabled selected hidden>Select Title / Category</option>`;
+    groups.forEach(g => {
+        html += `<option value="${escapeHtml(g.category)}">${escapeHtml(g.category)}</option>`;
+    });
+    html += `<option value="__NEW__">+ Other (New Title)</option>`;
+    sel.innerHTML = html;
+}
+
+function handleRequestCategoryChange() {
+    let sel = document.getElementById("userRequestedCategory");
+    let newCatInput = document.getElementById("userRequestedNewCategory");
+    if (sel.value === "__NEW__") {
+        newCatInput.style.display = "";
+        newCatInput.focus();
+    } else {
+        newCatInput.style.display = "none";
+        newCatInput.value = "";
+    }
+}
+
+// Title/category select for the Data Entry "Select Reason" box: pick a
+// title (Meter shifting, Zero Consumption, etc.) here first, and only that
+// title's reasons appear in the Reason list below. The chosen title is kept
+// in localStorage so it stays selected next time the app is opened.
+const SELECTED_REASON_CATEGORY_KEY = "SELECTED_REASON_CATEGORY";
+
+function renderReasonCategoryDropdown() {
+    let catSel = document.getElementById("reasonCategory");
+    if (!catSel) return;
+    let groups = groupReasons(REASONS);
+    let saved = localStorage.getItem(SELECTED_REASON_CATEGORY_KEY);
+    let current = catSel.value;
+
+    catSel.innerHTML = groups.map(g => `<option value="${escapeHtml(g.category)}">${escapeHtml(g.category)}</option>`).join("");
+
+    if (saved && groups.some(g => g.category === saved)) {
+        catSel.value = saved;
+    } else if (current && groups.some(g => g.category === current)) {
+        catSel.value = current;
+    } else if (groups.length) {
+        catSel.value = groups[0].category;
+    }
+
+    if (catSel.value) localStorage.setItem(SELECTED_REASON_CATEGORY_KEY, catSel.value);
+}
+
+// Fills the "Reason" select with only the reasons belonging to whichever
+// title is currently chosen in #reasonCategory.
+function renderReasonOptionsForCategory() {
+    let catSel = document.getElementById("reasonCategory");
+    let sel = document.getElementById("reason");
+    if (!catSel || !sel) return;
+
+    let groups = groupReasons(REASONS);
+    let group = groups.find(g => g.category === catSel.value);
+
+    let html = `<option value="" disabled selected hidden>Select Reason</option>`;
+    if (group) {
+        group.reasons.forEach(r => {
+            html += `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`;
+        });
+    }
+    sel.innerHTML = html;
+}
+
+// Called when the user switches the Title dropdown - saves the choice so it
+// survives closing/reopening the app, and refreshes the Reason list to show
+// only that title's reasons.
+function handleReasonCategoryChange() {
+    let catSel = document.getElementById("reasonCategory");
+    if (catSel && catSel.value) localStorage.setItem(SELECTED_REASON_CATEGORY_KEY, catSel.value);
+    renderReasonOptionsForCategory();
 }
 
 function renderReasonsDropdown() {  
@@ -1527,13 +1693,61 @@ function renderReasonsDropdown() {
     let filterSel = document.getElementById("filterReason");
     if(!sel || !filterSel) return;
 
-    sel.innerHTML = `<option value="">Select Reason</option>`;  
-    filterSel.innerHTML = `<option value="">All Reasons</option>`; 
-    REASONS.forEach(r=>{ 
-        sel.innerHTML += `<option value="${r}">${r}</option>`; 
-        filterSel.innerHTML += `<option value="${r}">${r}</option>`;
-    });  
+    // Data Entry "Reason" box: two-step Title -> Reason selection.
+    renderReasonCategoryDropdown();
+    renderReasonOptionsForCategory();
+
+    // Download tab filter: same two-step Title -> Reason selection, so only
+    // reasons belonging to the chosen title show up in the filter list.
+    renderFilterCategoryDropdown();
+    renderFilterReasonOptionsForCategory();
+    renderRequestCategoryDropdown();
 }  
+
+// Populates the Download tab's Title filter with every known category, plus
+// an "All Titles" option since this is a filter (unlike the required
+// reasonCategory field above, no title has to be picked here).
+function renderFilterCategoryDropdown() {
+    let catSel = document.getElementById("filterCategory");
+    if (!catSel) return;
+    let groups = groupReasons(REASONS);
+    let current = catSel.value;
+
+    catSel.innerHTML = `<option value="">All Titles</option>` +
+        groups.map(g => `<option value="${escapeHtml(g.category)}">${escapeHtml(g.category)}</option>`).join("");
+
+    if (current && groups.some(g => g.category === current)) catSel.value = current;
+}
+
+// Fills the Download tab's Reason filter with only the reasons belonging to
+// whichever title is chosen in #filterCategory; falls back to every reason
+// (grouped by title) when no title is selected.
+function renderFilterReasonOptionsForCategory() {
+    let catSel = document.getElementById("filterCategory");
+    let filterSel = document.getElementById("filterReason");
+    if (!catSel || !filterSel) return;
+
+    if (!catSel.value) {
+        filterSel.innerHTML = buildReasonOptionsHTML("All Reasons");
+        return;
+    }
+
+    let group = groupReasons(REASONS).find(g => g.category === catSel.value);
+    let html = `<option value="">All Reasons (${escapeHtml(catSel.value)})</option>`;
+    if (group) {
+        group.reasons.forEach(r => {
+            html += `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`;
+        });
+    }
+    filterSel.innerHTML = html;
+}
+
+// Called when the user switches the Download tab's Title filter.
+function handleFilterCategoryChange() {
+    renderFilterReasonOptionsForCategory();
+    document.getElementById("filterReason").value = "";
+    handleFilterInputClear();
+}
 
 function saveReport() {  
     let user = safeJSONParse(localStorage.getItem("currentUser"), null);  
@@ -1626,11 +1840,8 @@ function openEditModal(identifier) {
     modalAccountInput.value = formatAccountNumber(item.account || "");
     
     let reasonSel = document.getElementById("modalEditReason");
-    reasonSel.innerHTML = `<option value="">Select Reason</option>`;
-    REASONS.forEach(r => {
-        let selected = (r === item.reason) ? "selected" : "";
-        reasonSel.innerHTML += `<option value="${r}" ${selected}>${r}</option>`;
-    });
+    reasonSel.innerHTML = buildReasonOptionsHTML("Select Reason");
+    reasonSel.value = item.reason || "";
 
     document.getElementById("editModalOverlay").style.display = "flex";
 }
@@ -1784,6 +1995,8 @@ function applyMultiFilter() {
 
 function resetMultiFilter() {
     document.getElementById("filterAccount").value = "";
+    document.getElementById("filterCategory").value = "";
+    renderFilterReasonOptionsForCategory();
     document.getElementById("filterReason").value = "";
     document.getElementById("filterDate").value = getLocalDateString();
     let today = getLocalDateString();
@@ -2081,6 +2294,10 @@ if (cachedUser && cachedUser.username) {
     showApp();  
     setTimeout(() => { updateStatistics(); syncQueue(); }, 1500);   
 }  
+// Auto-sync when internet comes back
+window.addEventListener('online', () => {
+    if (safeJSONParse(localStorage.getItem("currentUser"), null)) syncQueue();
+});
 </script>  
 
 <!-- ===== Monthly Summary Module Script (Sierra Engineering) ===== -->
