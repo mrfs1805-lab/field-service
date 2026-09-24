@@ -2244,7 +2244,21 @@ function submitForm(){
     let localSubmittedCount = SUBMITTED_LOG.filter(item => (item.date || "") === date).length;
     let userCountToday = Math.max(todaySheetCount, localSubmittedCount) + 1;
 
+    // Never reuse an ID that already exists in the pending Queue, the local
+    // Submitted log or the Live sheet (counts can drop/shift while offline,
+    // which used to regenerate an ID that was already pending).
+    let usedIds = new Set();
+    [QUEUE, SUBMITTED_LOG, LIVE_SHEET_DATA].forEach(list => {
+        (list || []).forEach(it => {
+            let id = ((it && (it.dataId || it.id)) || "").toString().trim();
+            if (id) usedIds.add(id);
+        });
+    });
     let dataId = `${userPrefix}${monthPart}${dayPart}${userCountToday}`;
+    while (usedIds.has(dataId)) {
+        userCountToday++;
+        dataId = `${userPrefix}${monthPart}${dayPart}${userCountToday}`;
+    }
 
     let data = { dataId, account, reason, date, assistant: current.username, timestamp: Date.now() };      
     
@@ -2262,6 +2276,11 @@ function submitForm(){
         setStatus(`Saved Offline 📥 (ID: ${dataId})`);    
         updateStatistics();  
         renderEntriesLog();
+
+        document.getElementById("account").value = "";    
+        document.getElementById("reason").value = "";    
+        document.getElementById("date").value = getLocalDateString();  
+        updateAccountPrefix();
         return;    
     }      
 
