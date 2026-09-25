@@ -2104,6 +2104,21 @@ function checkLiveReset() {
 }  
 setInterval(checkLiveReset, 10000);
 
+// Phones aggressively pause/throttle background JS timers once the screen
+// is off or the app/tab is not in the foreground. If midnight (or the
+// 11:59 PM window) passes while the app is asleep like that, the interval
+// above can miss it, so the Account Number Prefix and User Report never
+// reset until something else happens to re-run checkLiveReset(). To make
+// the daily reset reliable even after long sleeps, also re-check the date
+// the instant the app comes back to the foreground (screen turned back
+// on / app switched back to / browser tab re-focused), instead of waiting
+// for the background interval to catch up.
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkLiveReset();
+});
+window.addEventListener("focus", checkLiveReset);
+window.addEventListener("pageshow", checkLiveReset);
+
 function isDuplicate(data){    
     let accDigits = (data.account || "").replace(/\D/g, "");
     let targetDate = data.date || getLocalDateString();
