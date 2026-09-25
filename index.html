@@ -678,7 +678,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
           <button class="adv-btn adv-btn-redo" onclick="advRedo()">↪️ Redo</button>
           <button class="adv-btn adv-btn-save" onclick="advSaveData(this)">☁️ Save</button>
           <button class="adv-btn adv-btn-danger" onclick="advResetAll()">🗑️ Clear All</button>
-          <button class="adv-btn adv-btn-preview" onclick="advToggleReview()">👁️ Preview</button>
+          <button class="adv-btn adv-btn-preview" onclick="advPreviewPDF(this)">👁️ Preview</button>
           <button class="adv-btn adv-btn-pdf" onclick="advDownloadPDF(this)">📄 PDF</button>
         </div>
       </div>
@@ -2880,7 +2880,7 @@ async function previewSummaryPDF(){
  }
 }
 
-function showPdfPreviewModal(imgData){
+function showPdfPreviewModal(imgData, onDownload){
  let modal=document.getElementById('pdfPreviewModal');
  if(modal) modal.remove();
 
@@ -2901,7 +2901,7 @@ function showPdfPreviewModal(imgData){
  document.getElementById('pdfPreviewCloseBtn').onclick=function(){ modal.remove(); };
  document.getElementById('pdfPreviewDownloadBtn').onclick=function(){
   modal.remove();
-  downloadSummaryPDF();
+  if(typeof onDownload==='function') onDownload(); else downloadSummaryPDF();
  };
 }
 async function saveDataToGoogleSheet(){
@@ -3784,6 +3784,23 @@ async function advBuildExportCanvas(){
   } finally {
     if(exportPage && exportPage.parentNode) exportPage.parentNode.removeChild(exportPage);
     if(exportStyle && exportStyle.parentNode) exportStyle.parentNode.removeChild(exportStyle);
+  }
+}
+
+// Preview = the exact A4 page image that the PDF uses, shown in the same
+// modal as the Download tab's Preview (fits the screen, Close / Download PDF).
+async function advPreviewPDF(btnElement){
+  if(btnElement) btnElement.disabled = true;
+  advShowLoading(true);
+  try {
+    const canvas = await advBuildExportCanvas();
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    showPdfPreviewModal(imgData, function(){ advDownloadPDF(); });
+  } catch(err) {
+    alert('Preview உருவாக்குவதில் பிழை ஏற்பட்டது: ' + (err && err.message ? err.message : err));
+  } finally {
+    advShowLoading(false);
+    if(btnElement) btnElement.disabled = false;
   }
 }
 
