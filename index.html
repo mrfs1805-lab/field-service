@@ -1045,6 +1045,52 @@ function switchTab(tabIndex) {
     }
 }
 
+// =====================================================
+// DEVICE FINGERPRINT
+// Builds a code from device/browser traits (screen, OS, browser,
+// timezone, canvas rendering, etc). It stays the same across a
+// normal cache/history clear because those traits don't change,
+// but it is NOT a guaranteed unique hardware ID - a browser update
+// or a different browser/incognito window can produce a new one.
+// =====================================================
+function generateDeviceFingerprint() {
+    try {
+        let parts = [];
+        parts.push(navigator.userAgent || "");
+        parts.push(navigator.language || "");
+        parts.push((screen.width || "") + "x" + (screen.height || "") + "x" + (screen.colorDepth || ""));
+        parts.push(new Date().getTimezoneOffset());
+        parts.push(navigator.hardwareConcurrency || "");
+        parts.push(navigator.platform || "");
+
+        try {
+            let canvas = document.createElement("canvas");
+            let ctx = canvas.getContext("2d");
+            ctx.textBaseline = "top";
+            ctx.font = "14px 'Arial'";
+            ctx.fillStyle = "#f60";
+            ctx.fillRect(125, 1, 62, 20);
+            ctx.fillStyle = "#069";
+            ctx.fillText("MRFS-device-check", 2, 15);
+            parts.push(canvas.toDataURL());
+        } catch(e) {
+            parts.push("canvas-na");
+        }
+
+        let raw = parts.join("||");
+
+        // Simple stable string hash (djb2-style) - no external library needed
+        let hash = 5381;
+        for (let i = 0; i < raw.length; i++) {
+            hash = ((hash << 5) + hash) + raw.charCodeAt(i);
+            hash = hash & hash; // keep it 32-bit
+        }
+        return "fp_" + Math.abs(hash).toString(36) + "_" + raw.length;
+    } catch(e) {
+        return "fp_unknown";
+    }
+}
+
 function login(){  
     let u = document.getElementById("username").value.trim();  
     let p = document.getElementById("password").value.trim();  
@@ -1053,10 +1099,12 @@ function login(){
         return;  
     }  
     document.getElementById("loginStatus").innerText = "Checking... ⏳";  
-    
+
+    let deviceFingerprint = generateDeviceFingerprint();
+
     fetch(USER_MANAGEMENT_URL, { 
         method: "POST", 
-        body: JSON.stringify({ action: "checkLogin", username: u, password: p }) 
+        body: JSON.stringify({ action: "checkLogin", username: u, password: p, fingerprint: deviceFingerprint }) 
     })  
     .then(res => res.json())  
     .then(data => {
@@ -1067,6 +1115,8 @@ function login(){
             localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today }));   
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
+        } else if(data && data.status === "pending_approval") {
+            document.getElementById("loginStatus").innerText = data.message || "New device detected. Waiting for Admin approval ⏳";
         } else {   
             document.getElementById("loginStatus").innerText = data.message || "Invalid Login ❌";   
         }   
