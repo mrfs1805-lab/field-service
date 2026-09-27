@@ -57,6 +57,18 @@ button:disabled {
     cursor: not-allowed;
 }  
   
+.category-lock-wrap{display:flex; gap:6px; align-items:stretch; margin-top:6px;}
+.category-lock-wrap select{flex:1 1 auto; width:auto; margin:0;}
+.category-lock-wrap select:disabled{background:#f0f0f0; color:#333; opacity:1; -webkit-text-fill-color:#333;}
+.categoryLockBtn{
+    flex:0 0 52px; width:52px;
+    border-radius:6px; border:1px solid #ccc;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; padding:0; margin:0; cursor:pointer;
+    background:#f8f9fa; color:#28a745;
+}
+.categoryLockBtn.unlocked{background:#fff8e1; color:#e6a800; border-color:#ffc107;}
+
 .logoutBtn{background:#dc3545; margin-top: 10px;}  
 .resetBtn{background:#ffc107; color:#000; margin-top: 20px; font-weight: bold;}
 .downloadBtn{background:#28a745; margin-top:8px;}  
@@ -425,7 +437,10 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         </div>
 
         <input id="account" placeholder="57/09/301/001/10" inputmode="numeric">  
-        <select id="reasonCategory" onchange="handleReasonCategoryChange()" style="margin-top:6px;"></select>
+        <div class="category-lock-wrap">
+            <select id="reasonCategory" onchange="handleReasonCategoryChange()"></select>
+            <button type="button" id="categoryLockBtn" class="categoryLockBtn" onclick="toggleCategoryLock()" aria-label="Unlock title selection">🔒</button>
+        </div>
         <select id="reason" style="margin-top:6px;"></select>  
         <button class="refreshBtn compact-btn" onclick="loadReasons(true)">Refresh Reasons 🔄</button>
         
@@ -889,6 +904,7 @@ const ADMIN_DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y
 const REASONS_URL = "https://script.google.com/macros/s/AKfycbxns_HddvoowgsRrSsSOqDeDZ7ObHpMMihmxb4OewUDTDlOQhV3pDUPNJkSGYv7WQsVwg/exec";
 const USER_MANAGEMENT_URL = "https://script.google.com/macros/s/AKfycbwhktmEgW_3CFN203f3n2IEjGLgQnQR_ZxbC_PrricRfePspfwNGfiv5KS7dEO5ut1t/exec";
 const REQUESTS_URL = "https://script.google.com/macros/s/AKfycbyu-CjSxeNmLLKnS1qAbV8R3ZuG94pEnlFhtSbSk0YOW-6zJBerVTlDe44bENChKZcmyQ/exec";
+const ADMIN_MOBILE_NUMBER = "0756617669";
 
 function safeJSONParse(str, fallback) {
     try {
@@ -1126,7 +1142,8 @@ function login(){
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
         } else if(data && data.status === "pending_approval") {
-            document.getElementById("loginStatus").innerText = data.message || "New device detected. Waiting for Admin approval ⏳";
+            let baseMsg = data.message || "New device detected. Waiting for Admin approval ⏳";
+            document.getElementById("loginStatus").innerHTML = `${escapeHtml(baseMsg)}<br>Contact Admin: <a href="tel:${ADMIN_MOBILE_NUMBER}" style="color:#0b3d91;font-weight:bold;text-decoration:underline;">${ADMIN_MOBILE_NUMBER}</a>`;
         } else {   
             document.getElementById("loginStatus").innerText = data.message || "Invalid Login ❌";   
         }   
@@ -1780,6 +1797,44 @@ function handleReasonCategoryChange() {
     let catSel = document.getElementById("reasonCategory");
     if (catSel && catSel.value) localStorage.setItem(SELECTED_REASON_CATEGORY_KEY, catSel.value);
     renderReasonOptionsForCategory();
+    // Auto re-lock right after a title is chosen, so the box goes back to
+    // being safely un-tappable and doesn't stay open/vulnerable to accidental
+    // taps while the user moves on to pick the Reason below.
+    lockCategorySelect();
+}
+
+// The Title box sits directly above the Reason box, so a tap meant for
+// "Reason" often lands on "Title" instead and silently changes it. Locking
+// (disabling) the Title box by default fixes that: normal taps do nothing to
+// it, and the currently selected Title is left exactly as-is. Tapping the
+// small ✅ button unlocks it on purpose so the Title can still be changed
+// when that is really what's wanted.
+function applyCategoryLockState(locked) {
+    let catSel = document.getElementById("reasonCategory");
+    let btn = document.getElementById("categoryLockBtn");
+    if (!catSel || !btn) return;
+    catSel.disabled = locked;
+    if (locked) {
+        btn.textContent = "🔒";
+        btn.classList.remove("unlocked");
+        btn.setAttribute("aria-label", "Unlock title selection");
+    } else {
+        btn.textContent = "🔓";
+        btn.classList.add("unlocked");
+        btn.setAttribute("aria-label", "Lock title selection");
+    }
+}
+function lockCategorySelect() { applyCategoryLockState(true); }
+function toggleCategoryLock() {
+    let catSel = document.getElementById("reasonCategory");
+    if (!catSel) return;
+    let nowLocked = !catSel.disabled;
+    applyCategoryLockState(nowLocked);
+    if (!nowLocked) {
+        // Just unlocked for the user - open the dropdown immediately so the
+        // unlock tap and the selection happen in one smooth motion.
+        catSel.focus();
+    }
 }
 
 function renderReasonsDropdown() {  
@@ -1790,6 +1845,7 @@ function renderReasonsDropdown() {
     // Data Entry "Reason" box: two-step Title -> Reason selection.
     renderReasonCategoryDropdown();
     renderReasonOptionsForCategory();
+    if (typeof lockCategorySelect === 'function') lockCategorySelect();
 
     // Download tab filter: same two-step Title -> Reason selection, so only
     // reasons belonging to the chosen title show up in the filter list.
@@ -2426,7 +2482,7 @@ function submitForm(){
             document.getElementById("date").value = getLocalDateString();  
             updateAccountPrefix();
         } else {
-            setStatus(resData.message || "Duplicate entry blocked ❌");
+            setStatus((resData && resData.message) || "Duplicate entry blocked ❌");
         }
     })    
     .catch(()=>{    
@@ -3559,7 +3615,7 @@ async function advFetchJsonWithRetry(url, options, retries){
       try{
         return JSON.parse(text);
       }catch(parseErr){
-        lastErr = new Error("Google Apps Script பதிலில் பிழை உள்ளது (HTTP " + res.status + "). Deployment அமைப்புகளைச் சரிபார்க்கவும்.");
+        lastErr = new Error("Error in Google Apps Script response (HTTP " + res.status + "). Please check deployment settings.");
       }
     }catch(networkErr){
       lastErr = networkErr;
@@ -3577,7 +3633,7 @@ async function advSaveData(btnElement){
     const data = advCollectAllData();
 
     if(!advSCRIPT_URL){
-      alert('Google Apps Script URL சரியாக அமைக்கப்படவில்லை!');
+      alert('Google Apps Script URL is not configured correctly!');
       return;
     }
 
@@ -3601,12 +3657,12 @@ async function advSaveData(btnElement){
         }
       }catch(e){}
       advCacheFullData(data);
-      alert('தரவு கூகுள் சீட்டில் வெற்றிகரமாக சேமிக்கப்பட்டது!');
+      alert('Data saved successfully to Google Sheets!');
     } else {
       alert('Error: ' + (resData.message || 'Failed to save to Google Sheets.'));
     }
   }catch(err){
-    alert('Google Sheets சேமிப்பில் பிழை ஏற்பட்டது: ' + err.message);
+    alert('Error saving to Google Sheets: ' + err.message);
   }finally{
     advShowLoading(false);
     if(btnElement) btnElement.disabled = false;
@@ -3915,7 +3971,7 @@ async function advPreviewPDF(btnElement){
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
     showPdfPreviewModal(imgData, function(){ advDownloadPDF(); });
   } catch(err) {
-    alert('Preview உருவாக்குவதில் பிழை ஏற்பட்டது: ' + (err && err.message ? err.message : err));
+    alert('Error generating preview: ' + (err && err.message ? err.message : err));
   } finally {
     advShowLoading(false);
     if(btnElement) btnElement.disabled = false;
@@ -3947,7 +4003,7 @@ async function advDownloadPDF(btnElement){
     pdf.save(`Meter_Reader_Programme_${safeName}.pdf`);
 
   } catch(err) {
-    alert('PDF உருவாக்குவதில் பிழை ஏற்பட்டது: ' + (err && err.message ? err.message : err));
+    alert('Error generating PDF: ' + (err && err.message ? err.message : err));
   } finally {
     advShowLoading(false);
     if(btnElement) btnElement.disabled = false;
