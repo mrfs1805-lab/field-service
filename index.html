@@ -2585,7 +2585,7 @@ async function autoFillRaName(){
  if(cached&&!raNameTouched&&!document.getElementById('raName').value.trim())setRaNameField(cached);
  // 2) confirm with Google Sheet (name saved earlier under this login user)
  try{
-  const res=await fetch(`${SUMMARY_WEB_APP_URL}?action=getRaName&loginUser=${encodeURIComponent(loginUser)}`);
+  const res=await fetch(`https://script.google.com/macros/s/AKfycbwX4TOCHjOtIHIUiBNgPOclrJZ7qh3PHpxR0ERkqREMi3o9rbRDPwkrkwpx-sT-O-1znQ/exec?action=getRaName&loginUser=${encodeURIComponent(loginUser)}`);
   const r=await res.json();
   if(r.status==='success'&&r.raName){
    localStorage.setItem(cacheKey,r.raName);
@@ -3094,7 +3094,7 @@ initSelectors();
 autoFillRaName();
 
 /* ===== Advance Programme Tab Module (fully namespaced, does not touch Download/Summary tab code) ===== */
-const advSCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRQJo913EVyXtMDgGzMnl7EesljnHs43g_nfBN1OJq22PIM50f2chI4GMezT_LpDCOig/exec";
+const advSCRIPT_URL = "https://script.google.com/macros/s/AKfycbwX4TOCHjOtIHIUiBNgPOclrJZ7qh3PHpxR0ERkqREMi3o9rbRDPwkrkwpx-sT-O-1znQ/exec";
 
 const advMonthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const advDayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -3656,6 +3656,7 @@ async function advSaveData(btnElement){
           }));
         }
       }catch(e){}
+      try{ if(advDashReaderName.value.trim()) localStorage.setItem('RA_NAME_'+advGetLoginUsername().toLowerCase(), advDashReaderName.value.trim()); }catch(e){}
       advCacheFullData(data);
       alert('Data saved successfully to Google Sheets!');
     } else {
