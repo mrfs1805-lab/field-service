@@ -380,6 +380,12 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
   #tab-advance table.adv-prog-table thead{display:table-header-group}
   #tab-advance tr{page-break-inside:avoid}
 }
+/* ===== Meter / Docket switch (Data Entry heading) ===== */
+.mdHeadRow{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:14px;}
+.mdSwitch{display:inline-flex; flex:0 0 auto; border:1px solid #007bff; border-radius:14px; overflow:hidden; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;}
+.mdSwitch span{font-size:9px; font-weight:bold; padding:6px 7px; color:#007bff; background:#fff; white-space:nowrap; line-height:1.1;}
+.mdSwitch span.on{background:#007bff; color:#fff;}
+.mdFixed{font-weight:bold; background:#f0f0f0; color:#222;}
 </style>  
 </head>  
 <body>  
@@ -426,9 +432,13 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 <div class="container" id="appBox" style="display:none;">  
     <div id="tab-data-enter" class="tab-content active">
         <div id="userInfo" style="margin-bottom: 5px; font-size: 14px; color: #555; display:flex; justify-content:space-between; align-items:center; gap:8px;"><span id="userInfoText"></span><span id="userInfoClock" style="font-size:11px; color:#888; white-space:nowrap;"></span></div>  
+        <div id="homeEntryWrap">
         <span id="userLiveStatus" style="font-size:11px; color:#28a745; font-weight:bold; display:block; margin-bottom:10px; background:#e7f5ea; padding:4px 8px; border-radius:4px; border:1px solid #c3e6cb;">🟢 Live Check Active</span>
         
-        <h2 style="margin-top: 0;">Data Entry 🏠</h2>
+        <div class="mdHeadRow">
+            <h2 style="margin:0;">Data Entry 🏠</h2>
+            <div class="mdSwitch" role="button" aria-label="Switch Home / Meter-Docket" onclick="MD.toggle()"><span class="mdSwA on">Home</span><span class="mdSwB">Meter/Docket</span></div>
+        </div>
         
         <label style="font-size: 12px; font-weight: bold; color: #555;">Account Number Prefix (57 / 09 / 301):</label>
         <div class="prefix-container">
@@ -482,6 +492,59 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
                 </div>
             </div>
         </div>
+        </div><!-- /homeEntryWrap -->
+
+        <!-- ===== Meter / Docket mode (shown only when the switch is on) ===== -->
+        <div id="mdEntryWrap" style="display:none;">
+            <span id="mdLiveStatus" style="font-size:11px; color:#28a745; font-weight:bold; display:block; margin-bottom:10px; background:#e7f5ea; padding:4px 8px; border-radius:4px; border:1px solid #c3e6cb;">🟡 Checking...</span>
+
+            <div class="mdHeadRow">
+                <h2 style="margin:0;">Data Entry 🏠</h2>
+                <div class="mdSwitch" role="button" aria-label="Switch Home / Meter-Docket" onclick="MD.toggle()"><span class="mdSwA">Home</span><span class="mdSwB on">Meter/Docket</span></div>
+            </div>
+
+            <label style="font-size: 12px; font-weight: bold; color: #555;">Account Number Prefix (57 / 09 / 301):</label>
+            <div class="prefix-container">
+                <input id="md_p1" placeholder="57" maxlength="2" inputmode="numeric">
+                <input id="md_p2" placeholder="09" maxlength="2" inputmode="numeric">
+                <input id="md_p3" placeholder="301" maxlength="3" inputmode="numeric">
+            </div>
+            <input id="md_account" placeholder="57/09/301/001/10" inputmode="numeric" maxlength="16">
+
+            <select id="md_title" onchange="MD.onTitle()">
+                <option value="meter">Meter Number Management</option>
+                <option value="docket">Docket Management</option>
+            </select>
+            <div id="md_meterWrap"><input id="md_meterNo" placeholder="Meter Number" inputmode="numeric" autocomplete="off"></div>
+            <div id="md_docketWrap" style="display:none;">
+                <input id="md_docketNo" placeholder="Correct Docket" inputmode="numeric" autocomplete="off">
+                <label style="font-size: 12px; font-weight: bold; color: #555;">Change Date:</label>
+                <input type="date" id="md_changeDate">
+            </div>
+
+            <input type="text" id="md_entryDate" class="mdFixed" readonly>
+            <input type="text" id="md_user" class="mdFixed" readonly>
+
+            <button id="md_submitBtn" onclick="MD.submit()">Submit</button>
+            <div id="md_status"></div>
+
+            <div class="smallBox">
+                <h3>User Report</h3>
+                <div class="dashboardBox">
+                    <div class="statCard active-filter" id="md_card_all" onclick="MD.setFilter('all')"><h4>Total Submitted</h4><span id="md_total">0</span></div>
+                    <div class="statCard" id="md_card_success" onclick="MD.setFilter('success')"><h4>Google Sheet Sent</h4><span id="md_success">0</span></div>
+                    <div class="statCard" id="md_card_pending" onclick="MD.setFilter('pending')"><h4>Pending</h4><span id="md_pending">0</span></div>
+                    <div class="statCard" id="md_card_failed" onclick="MD.setFilter('failed')"><h4>Failed</h4><span id="md_failed">0</span></div>
+                </div>
+                <button class="downloadBtn compact-btn" style="background:#ffc107; color:black;" onclick="MD.sync(false)">Retry / Sync Pending & Failed Data 🔄</button>
+                <button id="md_manualBtn" class="downloadBtn compact-btn" style="background:#fd7e14; color:white;" onclick="MD.liveCheck(false)">Send Pending / Failure Request Manual ✉️</button>
+                <button class="downloadBtn compact-btn" style="background:#28a745;" onclick="MD.pdfToday()">Download Today's Data (PDF) 📄</button>
+                <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:8px;">
+                    <h4 style="margin:4px 0; font-size:12px;">Today's Entries Log (All):</h4>
+                    <div id="md_log" style="max-height:200px; overflow-y:auto; font-size:12px; color:#555; background:#f9f9f9; padding:5px; border-radius:4px;">No entries made yet.</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Settings Tab -->
@@ -523,6 +586,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 
     <!-- Download Tab -->
     <div id="tab-download" class="tab-content">
+        <div id="homeDownloadWrap">
         <h2 style="margin-top: 0; color: #28a745;">Download Data 📥</h2>
         
         <div style="background:#f4f6f9; padding:12px; border-radius:8px; border:1px solid #ccd0d5;">
@@ -574,6 +638,45 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 
             <button class="downloadBtn compact-btn" style="background:#28a745; margin-top:12px;" onclick="downloadFilteredPDF()">Download PDF 📄</button>
             <button class="downloadBtn compact-btn" style="background:#17a2b8;" onclick="downloadFilteredCSV()">Download CSV (Excel) 📊</button>
+        </div>
+        </div><!-- /homeDownloadWrap -->
+
+        <!-- ===== Meter / Docket download (shown only when the switch is on) ===== -->
+        <div id="mdDownloadWrap" style="display:none;">
+            <h2 style="margin-top: 0; color: #28a745;">Download Data 📥</h2>
+            <div style="font-size:11px; color:#666; margin:-6px 0 8px 0;">Meter Number &amp; Docket records</div>
+
+            <div style="background:#f4f6f9; padding:12px; border-radius:8px; border:1px solid #ccd0d5;">
+                <label style="font-size:12px; font-weight:bold; color:#333; display:block; margin-bottom:5px;">Filter Data By:</label>
+                <div class="filter-grid">
+                    <input id="md_fAccount" placeholder="Filter by Account Number...">
+                    <select id="md_fType">
+                        <option value="">All Titles</option>
+                        <option value="meter">Meter Number Management</option>
+                        <option value="docket">Docket Management</option>
+                    </select>
+                    <input type="date" id="md_fDate">
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <button onclick="MD.applyFilter()" class="compact-btn" style="background:#007bff; flex:1;">Filter 🔍</button>
+                        <button onclick="MD.resetFilter()" class="compact-btn" style="background:#6c757d; flex:1;">Reset 🔄</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="smallBox" style="margin-top:15px;">
+                <h3 style="color:#007bff; display:flex; justify-content:space-between; align-items:center;">
+                    <span>📊 Submissions</span>
+                    <span id="md_dlCount" style="font-size:12px; background:#007bff; color:white; padding:2px 8px; border-radius:10px;">0 Records</span>
+                </h3>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead><tr><th>Data ID</th><th>Account Number</th><th>Meter / Docket</th><th>Date</th></tr></thead>
+                        <tbody id="md_dlBody"><tr><td colspan="4" style="text-align:center;">No Filter Applied</td></tr></tbody>
+                    </table>
+                </div>
+                <button class="downloadBtn compact-btn" style="background:#28a745; margin-top:12px;" onclick="MD.pdfFiltered()">Download PDF 📄</button>
+                <button class="downloadBtn compact-btn" style="background:#17a2b8;" onclick="MD.csvFiltered()">Download CSV (Excel) 📊</button>
+            </div>
         </div>
     </div>
 
@@ -899,6 +1002,25 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         <div style="display:flex; gap:8px; margin-top:15px;">
             <button onclick="saveModalEdit()" style="background:#28a745; flex:1;">Save & Request 💾</button>
             <button onclick="closeEditModal()" style="background:#dc3545; flex:1;">Cancel ❌</button>
+        </div>
+    </div>
+</div>
+
+<!-- Meter / Docket Edit Modal -->
+<div class="modal-overlay" id="mdEditOverlay">
+    <div class="modal-card">
+        <h3 style="margin-top:0; color:#007bff; text-align:center;">Edit Entry ✏️</h3>
+        <label style="font-size: 12px; font-weight: bold; color: #555; display: block; margin-top: 5px;">Account Number:</label>
+        <input id="md_eAccount" inputmode="numeric" maxlength="16" autocomplete="off">
+        <label id="md_eLabel" style="font-size: 12px; font-weight: bold; color: #555; display: block; margin-top: 10px;">Meter Number:</label>
+        <input id="md_eValue" inputmode="numeric" autocomplete="off">
+        <div id="md_eDateWrap" style="display:none;">
+            <label style="font-size: 12px; font-weight: bold; color: #555; display: block; margin-top: 10px;">Change Date:</label>
+            <input type="date" id="md_eDate">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:15px;">
+            <button onclick="MD.saveEdit()" style="background:#28a745; flex:1;">Save & Request 💾</button>
+            <button onclick="MD.closeEdit()" style="background:#dc3545; flex:1;">Cancel ❌</button>
         </div>
     </div>
 </div>
@@ -1332,6 +1454,7 @@ function showApp(){
     if (!userAutoRequestInterval) {
         userAutoRequestInterval = setInterval(() => {
             if (!LIVE_CHECK_ALLOWED_TABS.includes(CURRENT_ACTIVE_TAB)) return;
+            if (window.MD && MD.active()) return;
             sendDataMismatchRequest(true);
         }, 30000); 
     }
@@ -4135,6 +4258,305 @@ applyTabVisibility();
 
 advInitSelectors();
 advAutoFillProfile();
+</script>
+<!-- ===== Meter / Docket module (isolated: everything lives inside the MD object) ===== -->
+<script>
+const MD = (function () {
+  // Web app URL of the Meter / Docket Google Apps Script (Code.gs)
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxntU3yO8QH6TL_CEBYxQ8HHxM86AweDhyGOJ-301YhklLNS00YICLX3WVSGwzv1i6_KA/exec";
+
+  const $ = id => document.getElementById(id);
+  const ls = (k, f) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : f; } catch (e) { return f; } };
+  const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const clean = (m, f) => (m && !/[\u0B80-\u0BFF]/.test(String(m))) ? String(m) : f;
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const showDate = iso => { if (!iso) return '-'; const p = String(iso).split('-'); return p.length === 3 ? p[1] + '/' + p[2] + '/' + p[0] : iso; };
+  const timeStr = () => new Date().toLocaleTimeString();
+  const timeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Network Timeout')), ms))]);
+  const typeName = t => t === 'meter' ? 'Meter Number Management' : 'Docket Management';
+  const detail = e => e.type === 'meter' ? 'Meter Number: ' + e.value : 'Docket: ' + e.value + ' | Change Date: ' + showDate(e.changeDate);
+  const pick = e => ({ dataId: e.dataId, type: e.type, account: e.account, value: e.value, changeDate: e.changeDate || '', entryDate: e.entryDate });
+  const fmt = v => {
+    const d = String(v || '').replace(/\D/g, '').substring(0, 12), sizes = [2, 2, 3, 3, 2]; let i = 0; const parts = [];
+    sizes.forEach(s => { if (d.length > i) { parts.push(d.substring(i, i + s)); i += s; } });
+    return parts.join('/');
+  };
+
+  let on = false, ready = false, user = '', LOG = [], QUEUE = [], LIVE = [], FILTERED = [];
+  let filter = 'all', syncing = false, checking = false, editing = null, timer = null;
+  const k = n => n + '_' + user.toLowerCase();
+  const save = () => { sv(k('MD_QUEUE'), QUEUE); sv(k('MD_LOG'), LOG); };
+  const todayLog = () => LOG.filter(e => e.entryDate === today());
+  const liveToday = () => LIVE.filter(l => l.entryDate === today());
+
+  /* ---------- server ---------- */
+  function api(params, post) {
+    if (post) return fetch(SCRIPT_URL, { method: 'POST', body: new URLSearchParams(params) }).then(r => r.json());
+    return fetch(SCRIPT_URL + '?' + new URLSearchParams(Object.assign({ _t: Date.now() }, params))).then(r => { if (!r.ok) throw new Error('Server Error'); return r.json(); });
+  }
+  const sendEntry = (e, ms) => timeout(api(Object.assign(pick(e), { action: 'save', user: user }), false), ms);
+
+  /* ---------- switch ---------- */
+  function currentUser() { try { const u = JSON.parse(localStorage.getItem('currentUser')); return (u && u.username) ? u.username : ''; } catch (e) { return ''; } }
+
+  function toggle() {
+    on = !on;
+    $('homeEntryWrap').style.display = on ? 'none' : 'block';
+    $('mdEntryWrap').style.display = on ? 'block' : 'none';
+    $('homeDownloadWrap').style.display = on ? 'none' : 'block';
+    $('mdDownloadWrap').style.display = on ? 'block' : 'none';
+    if (on) {
+      if (!init()) { on = false; toggle_reset(); return; }
+      startCheck(); fetchLive(); if (QUEUE.length) sync(true);
+    } else {
+      stopCheck();
+      if (typeof fetchUserLiveSheetData === 'function') fetchUserLiveSheetData();
+    }
+    if (typeof CURRENT_ACTIVE_TAB !== 'undefined' && CURRENT_ACTIVE_TAB === 3 && on) applyFilter();
+  }
+  function toggle_reset() {
+    $('homeEntryWrap').style.display = 'block'; $('mdEntryWrap').style.display = 'none';
+    $('homeDownloadWrap').style.display = 'block'; $('mdDownloadWrap').style.display = 'none';
+  }
+
+  function init() {
+    user = currentUser();
+    if (!user) { alert('Please login again! ❌'); return false; }
+    if (ready) { refreshFixed(); return true; }
+    QUEUE = ls(k('MD_QUEUE'), []); LOG = ls(k('MD_LOG'), []).filter(e => e.entryDate === today() || QUEUE.some(q => q.dataId === e.dataId)); save();
+    const pf = ls(k('MD_PREFIX'), {}); $('md_p1').value = pf.p1 || ''; $('md_p2').value = pf.p2 || ''; $('md_p3').value = pf.p3 || '';
+    $('md_changeDate').value = today(); $('md_fDate').value = today();
+    bindInputs(); refreshFixed(); onTitle(); updateAccount(); stats(); renderLog();
+    ready = true; return true;
+  }
+  // The 30-second background check exists only while the Meter/Docket page is open.
+  function startCheck() { if (!timer) timer = setInterval(tick, 30000); }
+  function stopCheck() { if (timer) { clearInterval(timer); timer = null; } }
+  function refreshFixed() { $('md_entryDate').value = showDate(today()); $('md_user').value = user; }
+  function onTitle() {
+    const m = $('md_title').value;
+    $('md_meterWrap').style.display = m === 'meter' ? 'block' : 'none';
+    $('md_docketWrap').style.display = m === 'docket' ? 'block' : 'none';
+  }
+
+  /* ---------- inputs ---------- */
+  function updateAccount() {
+    const v = ['md_p1', 'md_p2', 'md_p3'].map(i => $(i).value.replace(/\D/g, '')), a = $('md_account');
+    const prefix = (v[0] + v[1] + v[2]).substring(0, 7);
+    a.value = fmt(prefix + a.value.replace(/\D/g, '').substring(prefix.length, 12));
+  }
+  function bindInputs() {
+    const ids = ['md_p1', 'md_p2', 'md_p3'];
+    ids.forEach((id, n) => $(id).addEventListener('input', function () {
+      this.value = this.value.replace(/\D/g, ''); updateAccount();
+      sv(k('MD_PREFIX'), { p1: $('md_p1').value, p2: $('md_p2').value, p3: $('md_p3').value });
+      if (this.value.length >= this.maxLength) $(n < 2 ? ids[n + 1] : 'md_account').focus();
+    }));
+    $('md_account').addEventListener('input', updateAccount);
+    $('md_eAccount').addEventListener('input', function () { this.value = fmt(this.value); });
+    ['md_meterNo', 'md_docketNo', 'md_eValue'].forEach(id => $(id).addEventListener('input', function () { this.value = this.value.replace(/\D/g, ''); }));
+  }
+
+  /* ---------- submit / sync ---------- */
+  function setStatus(msg) {
+    const el = $('md_status'); el.innerText = msg;
+    el.style.background = msg.includes('✅') ? '#d4edda' : msg.includes('❌') ? '#f8d7da' : '#e2e3e5';
+    el.style.color = msg.includes('✅') ? '#155724' : msg.includes('❌') ? '#721c24' : '#383d41';
+  }
+  function makeId(date) {
+    const pre = (user.length >= 2 ? user.substring(0, 2) : user).toUpperCase(), dp = date.split('-');
+    const m = parseInt(dp[1], 10), d = parseInt(dp[2], 10);
+    let n = Math.max(LIVE.filter(l => l.entryDate === date).length, LOG.filter(l => l.entryDate === date).length) + 1;
+    const used = new Set([...QUEUE, ...LOG, ...LIVE].map(x => x.dataId));
+    let id = pre + m + d + n; while (used.has(id)) { n++; id = pre + m + d + n; }
+    return id;
+  }
+  const same = (a, b) => a.type === b.type && a.account === b.account && String(a.value) === String(b.value) && (a.changeDate || '') === (b.changeDate || '');
+
+  function submit() {
+    const type = $('md_title').value, account = $('md_account').value;
+    if (account.replace(/\D/g, '').length !== 12) return setStatus('Account Number must be 12 digits ❌');
+    const e = { type: type, account: account, entryDate: today(), user: user, ts: Date.now() };
+    if (type === 'meter') { e.value = $('md_meterNo').value; if (!e.value) return setStatus('Enter Meter Number ❌'); }
+    else {
+      e.value = $('md_docketNo').value; e.changeDate = $('md_changeDate').value;
+      if (!e.value) return setStatus('Enter Correct Docket ❌');
+      if (!e.changeDate) return setStatus('Select Change Date ❌');
+    }
+    if ([...LOG, ...QUEUE, ...LIVE].some(x => same(x, e))) return setStatus('Duplicate entry blocked ❌');
+    e.dataId = makeId(e.entryDate);
+    const done = () => { ['md_account', 'md_meterNo', 'md_docketNo'].forEach(i => $(i).value = ''); updateAccount(); stats(); renderLog(); };
+    if (!navigator.onLine) { e.failed = true; LOG.push(e); QUEUE.push(e); save(); setStatus('Saved Offline 📥 (ID: ' + e.dataId + ')'); return done(); }
+    setStatus('Saving... ⏳'); $('md_submitBtn').disabled = true;
+    sendEntry(e, 15000).then(r => {
+      if (r && r.success) { LOG.push(e); LIVE.push(pick(e)); save(); setStatus('Saved Successfully ✅ (ID: ' + e.dataId + ')'); done(); }
+      else setStatus(clean(r && r.message, 'Duplicate entry blocked') + ' ❌');
+    }).catch(() => {
+      e.failed = true; LOG.push(e); QUEUE.push(e); save(); setStatus('Saved Offline (Sync pending) 📥'); done();
+    }).finally(() => { $('md_submitBtn').disabled = false; });
+  }
+
+  async function sync(silent) {
+    if (syncing) return;
+    if (!QUEUE.length) { if (!silent) setStatus('No pending data to sync 🟢'); return; }
+    syncing = true; if (!silent) setStatus('Syncing... 🔄');
+    let failed = false;
+    try {
+      while (QUEUE.length) {
+        const cur = QUEUE[0];
+        try {
+          const r = await sendEntry(cur, 10000);
+          if (r && (r.success || /Duplicate/.test(r.message || ''))) { QUEUE.shift(); save(); stats(); renderLog(); }
+          else { cur.failed = true; save(); failed = true; break; }
+        } catch (err) { cur.failed = true; save(); failed = true; break; }
+      }
+    } finally { syncing = false; }
+    stats(); renderLog();
+    if (failed) { if (!silent) setStatus('Sync pending - will retry automatically 🔄'); }
+    else { if (!silent) setStatus('Sync completed ✅'); fetchLive(); }
+  }
+
+  /* ---------- live check (30 s) ---------- */
+  async function fetchLive() {
+    const el = $('md_status') && $('mdLiveStatus'); if (el) el.innerText = '🟡 Checking...';
+    try {
+      const r = await timeout(api({ action: 'getRecords', user: user }, false), 15000);
+      if (!r || !r.success) throw new Error('bad');
+      LIVE = r.records || [];
+      const ids = new Set(LIVE.map(l => l.dataId)), n = QUEUE.length;
+      QUEUE = QUEUE.filter(q => !ids.has(q.dataId)); if (QUEUE.length !== n) save();
+      $('mdLiveStatus').innerText = '🟢 Live Verified: ' + timeStr();
+      stats(); renderLog(); if (!$('mdDownloadWrap').closest('.tab-content') || $('mdDownloadWrap').closest('.tab-content').classList.contains('active')) applyFilter();
+      return true;
+    } catch (e) { $('mdLiveStatus').innerText = '🔴 Live Check Failed (Offline)'; return false; }
+  }
+  async function tick() {
+    if (!on) return;
+    if (typeof LIVE_CHECK_ALLOWED_TABS !== 'undefined' && !LIVE_CHECK_ALLOWED_TABS.includes(CURRENT_ACTIVE_TAB)) return;
+    if (QUEUE.length) await sync(true);
+    liveCheck(true);
+  }
+  // Entries that are not in the Google Sheet are reported to the Admin automatically.
+  async function liveCheck(silent) {
+    if (checking) { if (!silent) setStatus('Sync/Request in progress... ⏳'); return; }
+    checking = true; const btn = $('md_manualBtn');
+    if (!silent) { btn.disabled = true; btn.innerText = 'Requesting Admin... ⏳'; setStatus('Checking mismatch data... ⏳'); }
+    try {
+      if (!(await fetchLive())) throw new Error('offline');
+      const seen = new Set(), list = [];
+      [...LOG, ...QUEUE].forEach(it => {
+        if (!it.dataId || seen.has(it.dataId)) return; seen.add(it.dataId);
+        if (LIVE.some(l => l.dataId === it.dataId)) return;
+        if (Date.now() - (it.ts || 0) < 60000) return;
+        list.push(it);
+      });
+      if (!list.length) { if (!silent) setStatus('No mismatch data found 🟢'); return; }
+      await Promise.all(list.map(it => api({ action: 'addRequest', user: user, kind: 'Mismatch', dataId: it.dataId, payload: JSON.stringify(pick(it)) }, true)));
+      const msg = list.length + ' Mismatch requests sent to Admin ✉️✅';
+      $('mdLiveStatus').innerText = '🟢 ' + msg + ' (' + timeStr() + ')';
+      if (!silent) { alert(msg); setStatus(msg); }
+    } catch (e) { if (!silent) setStatus('Request failed ❌'); }
+    finally { checking = false; btn.disabled = false; btn.innerText = 'Send Pending / Failure Request Manual ✉️'; }
+  }
+
+  /* ---------- dashboard ---------- */
+  function stats() {
+    $('md_total').innerText = todayLog().length; $('md_success').innerText = liveToday().length;
+    $('md_pending').innerText = QUEUE.length; $('md_failed').innerText = QUEUE.filter(q => q.failed).length;
+  }
+  function setFilter(f) {
+    filter = f; ['all', 'success', 'pending', 'failed'].forEach(n => $('md_card_' + n).classList.remove('active-filter'));
+    $('md_card_' + f).classList.add('active-filter'); renderLog();
+  }
+  function renderLog() {
+    const box = $('md_log');
+    const items = filter === 'pending' ? QUEUE : filter === 'failed' ? QUEUE.filter(q => q.failed) : filter === 'success' ? liveToday() : todayLog();
+    if (!items.length) { box.innerHTML = filter === 'all' ? 'No entries made yet.' : 'No entries found.'; return; }
+    box.innerHTML = [...items].reverse().map(e => {
+      const inSheet = LIVE.some(l => l.dataId === e.dataId), q = QUEUE.find(x => x.dataId === e.dataId);
+      const badge = inSheet ? '<span style="color:#28a745; font-weight:bold; font-size:10px;">🟢 In Sheet</span>'
+        : (q && q.failed) ? '<span style="color:#dc3545; font-weight:bold; font-size:10px;">❌ Failed</span>'
+        : '<span style="color:#dc3545; font-weight:bold; font-size:10px;">🔴 Pending</span>';
+      return '<div style="padding:6px 0; border-bottom:1px dashed #ddd;"><div style="display:flex; justify-content:space-between; align-items:center;"><b>ID: ' + esc(e.dataId) + '</b><div>' + badge +
+        ' <button onclick="MD.openEdit(\'' + esc(e.dataId) + '\')" class="compact-btn" style="background:#ffc107; color:black; padding:2px 6px !important; font-size:10px !important; margin:2px 0 0 0 !important; width:auto;">Edit 🖊️</button></div></div>' +
+        '<b>Acc: ' + esc(e.account) + '</b><br><span style="font-size:11px; color:#666;">' + esc(typeName(e.type)) + ' - ' + esc(detail(e)) + '</span></div>';
+    }).join('');
+  }
+
+  /* ---------- edit -> request to Admin ---------- */
+  function openEdit(id) {
+    const rec = LOG.find(x => x.dataId === id) || LIVE.find(x => x.dataId === id) || QUEUE.find(x => x.dataId === id);
+    if (!rec) return alert('Entry not found in local logs! ❌');
+    editing = rec;
+    $('md_eAccount').value = fmt(rec.account); $('md_eValue').value = rec.value;
+    $('md_eLabel').innerText = rec.type === 'meter' ? 'Meter Number:' : 'Correct Docket:';
+    $('md_eDateWrap').style.display = rec.type === 'docket' ? 'block' : 'none';
+    $('md_eDate').value = rec.changeDate || today();
+    $('mdEditOverlay').style.display = 'flex';
+  }
+  function closeEdit() { $('mdEditOverlay').style.display = 'none'; editing = null; }
+  async function saveEdit() {
+    if (!editing) return;
+    const rec = editing, account = fmt($('md_eAccount').value), value = $('md_eValue').value;
+    if (account.replace(/\D/g, '').length !== 12) return alert('Account Number must contain exactly 12 digits (2/2/3/3/2) ❌');
+    if (!value) return alert('Value cannot be empty! ❌');
+    const fields = { account: account, value: value };
+    if (rec.type === 'docket') { fields.changeDate = $('md_eDate').value; if (!fields.changeDate) return alert('Select Change Date ❌'); }
+    try {
+      setStatus('Sending edit request to Admin... ⏳');
+      const r = await api({ action: 'addRequest', user: user, kind: 'Edit', dataId: rec.dataId, payload: JSON.stringify({ fields: fields, record: pick(rec) }) }, true);
+      if (!r || !r.success) throw new Error('fail');
+      [LOG, QUEUE].forEach(list => list.forEach(x => { if (x.dataId === rec.dataId) Object.assign(x, fields); }));
+      save(); renderLog(); stats(); closeEdit();
+      alert('Edit request sent successfully to Admin and updated locally! ✅✉️'); setStatus('Edit request sent successfully ✅');
+    } catch (e) { alert('Failed to send edit request to Admin! ❌'); setStatus('Edit request failed ❌'); }
+  }
+
+  /* ---------- download tab ---------- */
+  function applyFilter() {
+    if (!ready) return;
+    const acc = $('md_fAccount').value.trim().toLowerCase(), type = $('md_fType').value, date = $('md_fDate').value;
+    FILTERED = LIVE.filter(l => (!acc || String(l.account).toLowerCase().includes(acc)) && (!type || l.type === type) && (acc || !date || l.entryDate === date));
+    $('md_dlCount').innerText = FILTERED.length + ' Records';
+    $('md_dlBody').innerHTML = FILTERED.length ? [...FILTERED].reverse().map(l => '<tr><td>' + esc(l.dataId) + '</td><td>' + esc(l.account) + '</td><td>' + esc(l.value) + (l.type === 'docket' ? '<br><small>from ' + esc(showDate(l.changeDate)) + '</small>' : '') + '</td><td>' + esc(showDate(l.entryDate)) + '</td></tr>').join('')
+      : '<tr><td colspan="4" style="text-align:center;">No Data Found</td></tr>';
+  }
+  function resetFilter() { $('md_fAccount').value = ''; $('md_fType').value = ''; $('md_fDate').value = today(); applyFilter(); }
+  function rows(list) { return list.map(e => [e.dataId, e.type === 'meter' ? 'Meter' : 'Docket', e.account, e.value, e.changeDate ? showDate(e.changeDate) : '-', showDate(e.entryDate), user]); }
+  function pdf(list, name) {
+    if (!list.length) return alert('No data available! ❌');
+    if (!window.jspdf) return alert('PDF library did not load. Check internet connection.');
+    const doc = new window.jspdf.jsPDF(); doc.setFontSize(14); doc.text('MR Field Service - Meter & Docket Report', 14, 15);
+    doc.setFontSize(9); doc.text('User: ' + user + ' | Date: ' + showDate(today()), 14, 22);
+    doc.autoTable({ startY: 26, theme: 'striped', headStyles: { fillColor: [0, 123, 255] }, styles: { fontSize: 8 },
+      head: [['Data ID', 'Title', 'Account Number', 'Meter / Docket', 'Entry Date', 'Submitted By']],
+      body: rows(list).map(r => [r[0], r[1], r[2], r[3], r[5], r[6]]) });   // Change Date column is not printed in the PDF
+    doc.save(user + '_' + name + '.pdf');
+  }
+  const pdfToday = () => pdf(todayLog().length ? todayLog() : liveToday(), 'Meter_Docket_Report');
+  const pdfFiltered = () => pdf(FILTERED, 'Meter_Docket_Filtered');
+  function csvFiltered() {
+    if (!FILTERED.length) return alert('No data available! ❌');
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const head = ['Data ID', 'Title', 'Account Number', 'Meter / Docket', 'Change Date', 'Entry Date', 'Submitted By'];
+    const csv = '\uFEFF' + [head].concat(rows(FILTERED)).map(r => r.map(q).join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = user + '_Meter_Docket.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  /* ---------- keep Home / Download tab content in step with the switch ---------- */
+  const baseSwitchTab = window.switchTab;
+  window.switchTab = function (i) {
+    baseSwitchTab.apply(this, arguments);
+    if (on && ready && i === 3) { applyFilter(); fetchLive(); }
+  };
+
+  return {
+    toggle, onTitle, submit, sync, liveCheck, setFilter, openEdit, closeEdit, saveEdit,
+    applyFilter, resetFilter, pdfToday, pdfFiltered, csvFiltered, active: () => on
+  };
+})();
 </script>
 </body>  
 </html>
