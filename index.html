@@ -4300,6 +4300,18 @@ const MD = (function () {
   /* ---------- switch ---------- */
   function currentUser() { try { const u = JSON.parse(localStorage.getItem('currentUser')); return (u && u.username) ? u.username : ''; } catch (e) { return ''; } }
 
+  // The selected page (Home or Meter/Docket) is remembered in local storage until the day ends.
+  const modeKey = u => 'MD_MODE_' + String(u).toLowerCase();
+  function saveMode() { if (user) sv(modeKey(user), { mode: on ? 'md' : 'home', date: today() }); }
+  function restore() {
+    if (on) return;
+    const u = currentUser(); if (!u) return;
+    const m = ls(modeKey(u), null);
+    if (!m) return;
+    if (m.date !== today()) { try { localStorage.removeItem(modeKey(u)); } catch (e) {} return; }   // new day: back to Home
+    if (m.mode === 'md') toggle();
+  }
+
   function toggle() {
     on = !on;
     $('homeEntryWrap').style.display = on ? 'none' : 'block';
@@ -4309,8 +4321,9 @@ const MD = (function () {
     if (on) {
       if (!init()) { on = false; toggle_reset(); return; }
       startCheck(); fetchLive(); if (QUEUE.length) sync(true);
+      saveMode();
     } else {
-      stopCheck();
+      stopCheck(); saveMode();
       if (typeof fetchUserLiveSheetData === 'function') fetchUserLiveSheetData();
     }
     if (typeof CURRENT_ACTIVE_TAB !== 'undefined' && CURRENT_ACTIVE_TAB === 3 && on) applyFilter();
@@ -4551,6 +4564,13 @@ const MD = (function () {
     baseSwitchTab.apply(this, arguments);
     if (on && ready && i === 3) { applyFilter(); fetchLive(); }
   };
+
+  // Re-apply the saved page after a login (the first load is handled below)
+  const baseShowApp = window.showApp;
+  if (typeof baseShowApp === 'function') {
+    window.showApp = function () { const r = baseShowApp.apply(this, arguments); try { restore(); } catch (e) {} return r; };
+  }
+  setTimeout(restore, 0);
 
   return {
     toggle, onTitle, submit, sync, liveCheck, setFilter, openEdit, closeEdit, saveEdit,
