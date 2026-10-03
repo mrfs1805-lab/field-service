@@ -1379,6 +1379,8 @@ function resetLocalData(){
         localStorage.removeItem("lastEntry_" + username);
         localStorage.removeItem("PREFIXES_" + username);
         localStorage.removeItem("SHEET_COUNT_" + username);
+        localStorage.removeItem("MD_PREFIX_" + username);
+        localStorage.removeItem("MD_MODE_" + username);
     }
 
     alert("Local data reset successfully! ✅ Logging out now.");
@@ -2373,6 +2375,8 @@ function checkLiveReset() {
         localStorage.removeItem("lastEntry_" + username);
         localStorage.removeItem("PREFIXES_" + username);
         localStorage.removeItem("SHEET_COUNT_" + username);
+        localStorage.removeItem("MD_PREFIX_" + username);
+        localStorage.removeItem("MD_MODE_" + username);
 
         updateStatistics();  
         renderEntriesLog();
@@ -4338,7 +4342,7 @@ const MD = (function () {
     if (!user) { alert('Please login again! ❌'); return false; }
     if (ready) { refreshFixed(); return true; }
     QUEUE = ls(k('MD_QUEUE'), []); LOG = ls(k('MD_LOG'), []).filter(e => e.entryDate === today() || QUEUE.some(q => q.dataId === e.dataId)); save();
-    const pf = ls(k('MD_PREFIX'), {}); $('md_p1').value = pf.p1 || ''; $('md_p2').value = pf.p2 || ''; $('md_p3').value = pf.p3 || '';
+    const pf0 = ls(k('MD_PREFIX'), {}); const pf = pf0.date === today() ? pf0 : {}; $('md_p1').value = pf.p1 || ''; $('md_p2').value = pf.p2 || ''; $('md_p3').value = pf.p3 || '';
     $('md_changeDate').value = today(); $('md_fDate').value = today();
     bindInputs(); refreshFixed(); onTitle(); updateAccount(); stats(); renderLog();
     ready = true; return true;
@@ -4363,7 +4367,7 @@ const MD = (function () {
     const ids = ['md_p1', 'md_p2', 'md_p3'];
     ids.forEach((id, n) => $(id).addEventListener('input', function () {
       this.value = this.value.replace(/\D/g, ''); updateAccount();
-      sv(k('MD_PREFIX'), { p1: $('md_p1').value, p2: $('md_p2').value, p3: $('md_p3').value });
+      sv(k('MD_PREFIX'), { p1: $('md_p1').value, p2: $('md_p2').value, p3: $('md_p3').value, date: today() });
       if (this.value.length >= this.maxLength) $(n < 2 ? ids[n + 1] : 'md_account').focus();
     }));
     $('md_account').addEventListener('input', updateAccount);
