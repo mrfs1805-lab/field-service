@@ -314,6 +314,8 @@ button:disabled {
  #tab-summary table.sierra-table input{border:none!important}
 }
 
+/* R.A Name locked once a name has been saved (prevents creating a new sheet by accident) */
+.ra-locked{background:#eef1f4!important;color:#333!important;cursor:not-allowed}
 /* ===== Advance Programme Tab (scoped so it never affects the other tabs) ===== */
 #tab-advance, #tab-advance *{box-sizing:border-box}
 #tab-advance{font-family:'Times New Roman',Times,serif;color:#222}
@@ -1040,6 +1042,12 @@ function safeMsg(msg, fallback){
 
 const ADMIN_MOBILE_NUMBER = "0756617669";
 
+// Login token issued by the server (sent with Save / Delete requests)
+function getAuthToken(){
+  try{ const u = JSON.parse(localStorage.getItem("currentUser")); return (u && u.token) ? String(u.token) : ""; }
+  catch(e){ return ""; }
+}
+
 function safeJSONParse(str, fallback) {
     try {
         return str ? JSON.parse(str) : fallback;
@@ -1273,7 +1281,7 @@ function login(){
 
         if(isSuccess) {   
             let today = getLocalDateString();  
-            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today }));   
+            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today, token: data.token || "" }));   
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
         } else if(data && data.status === "pending_approval") {
@@ -1335,7 +1343,7 @@ function resetPasswordAction() {
 
     fetch(USER_MANAGEMENT_URL, {
         method: "POST",
-        body: JSON.stringify({ action: "resetPassword", username: username, newPassword: newPassword })
+        body: JSON.stringify({ action: "resetPassword", username: username, newPassword: newPassword, mobile: document.getElementById("fp_mobile").value.trim() })
     })
     .then(res => res.json())
     .then(result => {
@@ -2716,20 +2724,30 @@ function setRaNameField(name){
  document.getElementById('raName').value=name;
  document.getElementById('raToolbarInput').value=name;
 }
+// Once an R.A name has been saved, it becomes the fixed default: both
+// R.A Name boxes turn read-only so a typo can't create a new sheet.
+function lockRaName(){
+ ['raName','raToolbarInput'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.readOnly=true;el.classList.add('ra-locked');
+  el.title='Locked: this R.A name is already saved';
+ });
+}
 async function autoFillRaName(){
  const loginUser=getLoginUsername();
  if(!loginUser)return;
  const cacheKey="RA_NAME_"+loginUser.toLowerCase();
  // 1) instant fill from this device's cache
  const cached=localStorage.getItem(cacheKey);
- if(cached&&!raNameTouched&&!document.getElementById('raName').value.trim())setRaNameField(cached);
+ if(cached){setRaNameField(cached);lockRaName()}
  // 2) confirm with Google Sheet (name saved earlier under this login user)
  try{
   const res=await fetch(`${SUMMARY_WEB_APP_URL}?action=getRaName&loginUser=${encodeURIComponent(loginUser)}`);
   const r=await res.json();
   if(r.status==='success'&&r.raName){
    localStorage.setItem(cacheKey,r.raName);
-   if(!raNameTouched)setRaNameField(r.raName);
+   setRaNameField(r.raName);lockRaName();
   }
  }catch(err){console.warn('R.A name auto-fill failed:',err)}
 }
@@ -3224,10 +3242,10 @@ async function saveDataToGoogleSheet(){
  showLoading(true);const tableData=[];
  document.querySelectorAll('#tableBody tr').forEach(tr=>{const i=tr.querySelectorAll('input');tableData.push({sno:tr.getAttribute('data-sno'),date:i[0].value,area:i[1].value,order:i[2].value,qty:i[3].value})});
  const loginUser=getLoginUsername();
- const payload={action:"save",raName,loginUser,monthKey:getMonthKey(),data:{billingPeriod:`${document.getElementById('periodFrom').value} - ${document.getElementById('periodTo').value}`,contractNo:document.getElementById('contractNo').value,totalQty:document.getElementById('totalBills').value,tableData}};
+ const payload={action:"save",raName,loginUser,token:getAuthToken(),monthKey:getMonthKey(),data:{billingPeriod:`${document.getElementById('periodFrom').value} - ${document.getElementById('periodTo').value}`,contractNo:document.getElementById('contractNo').value,totalQty:document.getElementById('totalBills').value,tableData}};
  try{
   const response=await fetch(SUMMARY_WEB_APP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}),result=await response.json();showLoading(false);
-  if(result.status==='success'){if(loginUser)localStorage.setItem('RA_NAME_'+loginUser.toLowerCase(),raName);alert(`Data for ${raName} saved successfully to Google Sheets!`)}else alert('Error: '+safeMsg(result.message,'Failed to save data.'));
+  if(result.status==='success'){if(loginUser)localStorage.setItem('RA_NAME_'+loginUser.toLowerCase(),raName);lockRaName();alert(`Data for ${raName} saved successfully to Google Sheets!`)}else alert('Error: '+safeMsg(result.message,'Failed to save data.'));
  }catch(err){showLoading(false);alert('Error saving data: '+err.message)}
 }
 
@@ -3557,11 +3575,10 @@ async function advDeleteSheetRowByDate(btnElement) {
   advShowLoading(true);
 
   try {
-    advClearDashboardRow();
-
     const payload = {
       action: "deleteDate",
       loginUser: advGetLoginUsername(),
+      token: getAuthToken(),
       month: advDashMonth.value,
       year: advDashYear.value,
       dateNum: dateNum
@@ -3578,6 +3595,7 @@ async function advDeleteSheetRowByDate(btnElement) {
       const resData = JSON.parse(text);
 
       if (resData.status === "success") {
+        advClearDashboardRow(); // clear on screen only after the sheet really deleted it
         alert(resData.message || "Date entry successfully deleted from Google Sheets!");
       } else {
         alert("Error: " + (resData.message || "Failed to delete data."));
@@ -3642,6 +3660,9 @@ function advMoveRowData(){
   sourceRow.cells[5].textContent = '';
   sourceRow.cells[6].textContent = '';
 
+  // Source date is now empty, so refresh the input boxes to match (clears them)
+  advLoadSelectedRow();
+
   advSaveState();
   alert(`Date ${fromVal} data moved to Date ${toVal}.`);
 }
@@ -3656,6 +3677,7 @@ function advCollectAllData(){
     month: advDashMonth.value,
     year: advDashYear.value,
     loginUser: advGetLoginUsername(),
+    token: getAuthToken(),
     lastUpdated: new Date().toLocaleString(),
     rows: []
   };
@@ -3713,6 +3735,7 @@ function advApplyAllData(data){
 
   if(data.rows && data.rows.length){
     advRestoreState(JSON.stringify(data.rows));
+    advSaveState(); // record the loaded data so Undo/Redo stay consistent
   }
 
   // Advance Programme data has now actually arrived (cache or Google Sheet).
@@ -3817,7 +3840,8 @@ async function advSaveData(btnElement){
           }));
         }
       }catch(e){}
-      advCacheFullData(data);
+      const cacheCopy = Object.assign({}, data); delete cacheCopy.token; // never keep the token in the table cache
+      advCacheFullData(cacheCopy);
       alert('Data saved successfully to Google Sheets!');
     } else {
       alert('Error: ' + safeMsg(resData.message, 'Failed to save to Google Sheets.'));
@@ -3981,6 +4005,7 @@ async function advCopyFromMonth(){
 
     advRestoreState(JSON.stringify(sourceData.rows));
     advLoadSelectedRow();
+    advSaveState(); // so Undo can revert the template copy
 
   }catch(err){
     alert('Copy failed: ' + (err && err.message ? err.message : err));
