@@ -1,7 +1,15 @@
 <!DOCTYPE html>  
+<!--
+  CODING RULE (for every future edit): write ALL code in English only.
+  This includes UI text, labels, placeholders, alerts, status messages,
+  comments, variable and function names. No Tamil or other languages
+  inside the code. Instructions may be given in Tamil; the code stays English.
+-->
 <html lang="en">  
 <head>  
-<meta charset="UTF-8">  
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mrfs1805-lab.github.io; font-src 'self' data:; connect-src https://script.google.com https://*.googleusercontent.com; manifest-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">  
 <meta name="viewport" content="width=device-width, initial-scale=1.0">  
 <title>MR Field Service</title>  
 <link rel="icon" href="https://mrfs1805-lab.github.io/field-service/favicon-32.png" sizes="32x32" type="image/png">
@@ -1030,9 +1038,22 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 <script> 
 const DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
 const ADMIN_DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
-const REASONS_URL = "https://script.google.com/macros/s/AKfycbxns_HddvoowgsRrSsSOqDeDZ7ObHpMMihmxb4OewUDTDlOQhV3pDUPNJkSGYv7WQsVwg/exec";
+const REASONS_URL = "https://script.google.com/macros/s/AKfycbxjbbD_m7lu9bZoGyerWKOJAnSvqTXdcVk9vJbGLFPV8T5PulXN6EF8hKD01tVQu2ZDuw/exec";
 const USER_MANAGEMENT_URL = "https://script.google.com/macros/s/AKfycbwhktmEgW_3CFN203f3n2IEjGLgQnQR_ZxbC_PrricRfePspfwNGfiv5KS7dEO5ut1t/exec";
-const REQUESTS_URL = "https://script.google.com/macros/s/AKfycbyu-CjSxeNmLLKnS1qAbV8R3ZuG94pEnlFhtSbSk0YOW-6zJBerVTlDe44bENChKZcmyQ/exec";
+// Send a request to the admin (needs the login token); rejects if the server refuses it
+function postRequest(fields) {
+    return fetch(REQUESTS_URL, {
+        method: "POST",
+        body: new URLSearchParams(Object.assign({ action: "addRequest", token: getAuthToken() }, fields))
+    })
+    .then(r => r.json().catch(() => ({ success: true })))
+    .then(j => {
+        if (j && j.success === false) throw new Error(j.message || "Request was not accepted");
+        return j;
+    });
+}
+
+const REQUESTS_URL = "https://script.google.com/macros/s/AKfycbxjbbD_m7lu9bZoGyerWKOJAnSvqTXdcVk9vJbGLFPV8T5PulXN6EF8hKD01tVQu2ZDuw/exec";
 
 // Server messages are shown only if they contain no Tamil text; otherwise the English fallback is used.
 function safeMsg(msg, fallback){
@@ -1132,6 +1153,10 @@ function groupReasons(list){
 
 function escapeHtml(s){
     return (s || "").toString().replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+// Safe value for a JS string argument inside an inline onclick="fn('...')" attribute
+function jsArg(s){
+    return escapeHtml(String(s == null ? "" : s).replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\r/g,"\\r").replace(/\n/g,"\\n"));
 }
 
 // Builds <optgroup> grouped <option> HTML for a reason <select>, so reasons
@@ -1260,6 +1285,97 @@ function generateDeviceFingerprint() {
     }
 }
 
+// ===== Device identity for the "3 wrong passwords -> lock this phone" rule =====
+// deviceId = random ID kept in localStorage + cookie + IndexedDB (survives clearing just one of them)
+// fpStrong = SHA-256 of hardware/browser traits (survives clearing ALL site data)
+// Both are sent ONLY with login; the old fingerprint used for device approval is NOT changed.
+function getDeviceId(){
+    return new Promise(function(resolve){
+        var KEY = "MRFS_DEVICE_ID", found = "";
+        try { found = localStorage.getItem(KEY) || ""; } catch(e) {}
+        if(!found){ var m = document.cookie.match(/(?:^|; )MRFS_DEVICE_ID=([^;]+)/); if(m) found = m[1]; }
+        function newId(){ var a = new Uint8Array(16); crypto.getRandomValues(a); return Array.from(a, function(b){ return ("0"+b.toString(16)).slice(-2); }).join(""); }
+        function finish(id){
+            try { localStorage.setItem(KEY, id); } catch(e) {}
+            try { document.cookie = KEY + "=" + id + "; max-age=315360000; path=/; SameSite=Lax; Secure"; } catch(e) {}
+            try {
+                var w = indexedDB.open("mrfs_dev", 1);
+                w.onupgradeneeded = function(){ w.result.createObjectStore("k"); };
+                w.onsuccess = function(){ try { w.result.transaction("k","readwrite").objectStore("k").put(id, KEY); } catch(e) {} };
+            } catch(e) {}
+            resolve(id);
+        }
+        if(found){ finish(found); return; }
+        try {
+            var r = indexedDB.open("mrfs_dev", 1);
+            r.onupgradeneeded = function(){ r.result.createObjectStore("k"); };
+            r.onerror = function(){ finish(newId()); };
+            r.onsuccess = function(){
+                try {
+                    var g = r.result.transaction("k").objectStore("k").get(KEY);
+                    g.onsuccess = function(){ finish(g.result || newId()); };
+                    g.onerror = function(){ finish(newId()); };
+                } catch(e) { finish(newId()); }
+            };
+        } catch(e) { finish(newId()); }
+    });
+}
+async function strongFingerprint(){
+    try {
+        var gpu = "";
+        try {
+            var gl = document.createElement("canvas").getContext("webgl");
+            var ext = gl && gl.getExtension("WEBGL_debug_renderer_info");
+            if(ext) gpu = gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) + "|" + gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        } catch(e) {}
+        var raw = [
+            (navigator.userAgent || "").replace(/\d+(\.\d+)+/g, ""),
+            navigator.platform || "", navigator.language || "",
+            navigator.hardwareConcurrency || "", navigator.deviceMemory || "", navigator.maxTouchPoints || 0,
+            Math.max(screen.width, screen.height) + "x" + Math.min(screen.width, screen.height) + "x" + screen.colorDepth,
+            window.devicePixelRatio || "",
+            (Intl.DateTimeFormat().resolvedOptions().timeZone || ""), gpu
+        ].join("||");
+        var buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+        return "sf_" + Array.from(new Uint8Array(buf), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+    } catch(e) { return ""; }
+}
+// Phone model (sent with login so the Admin can see which phone tried which account)
+async function getDeviceModel(){
+    try {
+        var ua = navigator.userAgent || "", model = "", plat = "";
+        if(navigator.userAgentData && navigator.userAgentData.getHighEntropyValues){
+            try {
+                var h = await navigator.userAgentData.getHighEntropyValues(["model","platform","platformVersion"]);
+                model = h.model || ""; plat = (h.platform || "") + " " + (h.platformVersion || "");
+            } catch(e) {}
+        }
+        if(!model){
+            var m = ua.match(/;\s*([^;)]+?)\s+Build\//) || ua.match(/Android[^;)]*;\s*([^;)]+)\)/);
+            if(m) model = m[1];
+        }
+        if(!model){
+            if(/iPhone/.test(ua)) model = "iPhone";
+            else if(/iPad/.test(ua)) model = "iPad";
+            else if(/Windows/.test(ua)) model = "Windows PC";
+            else if(/Macintosh/.test(ua)) model = "Mac";
+            else if(/Linux/.test(ua)) model = "Linux";
+        }
+        if(!plat){
+            var a = ua.match(/Android\s[\d.]+/) || ua.match(/OS\s[\d_]+/);
+            plat = a ? a[0].replace(/_/g,".") : "";
+        }
+        return ((model || "Unknown") + (plat.trim() ? " (" + plat.trim() + ")" : "")).substring(0, 120);
+    } catch(e) { return "Unknown"; }
+}
+// never lets login hang: gives up on the IDs after 2.5 s and logs in without them
+function getDeviceIds(){
+    return Promise.race([
+        Promise.all([getDeviceId(), strongFingerprint()]),
+        new Promise(function(res){ setTimeout(function(){ res(["", ""]); }, 2500); })
+    ]);
+}
+
 function login(){  
     let u = document.getElementById("username").value.trim();  
     let p = document.getElementById("password").value.trim();  
@@ -1271,9 +1387,12 @@ function login(){
 
     let deviceFingerprint = generateDeviceFingerprint();
 
-    fetch(USER_MANAGEMENT_URL, { 
-        method: "POST", 
-        body: JSON.stringify({ action: "checkLogin", username: u, password: p, fingerprint: deviceFingerprint }) 
+    Promise.all([getDeviceIds(), getDeviceModel()]).then(function(r){
+        let ids = r[0], model = r[1];
+        return fetch(USER_MANAGEMENT_URL, { 
+            method: "POST", 
+            body: JSON.stringify({ action: "checkLogin", username: u, password: p, fingerprint: deviceFingerprint, deviceId: ids[0], fpStrong: ids[1], deviceModel: model }) 
+        });
     })  
     .then(res => res.json())  
     .then(data => {
@@ -1287,16 +1406,22 @@ function login(){
         } else if(data && data.status === "pending_approval") {
             let baseMsg = safeMsg(data.message, "New device detected. Waiting for Admin approval ⏳");
             document.getElementById("loginStatus").innerHTML = `${escapeHtml(baseMsg)}<br>Contact Admin: <a href="tel:${ADMIN_MOBILE_NUMBER}" style="color:#0b3d91;font-weight:bold;text-decoration:underline;">${ADMIN_MOBILE_NUMBER}</a>`;
+        } else if(data && data.status === "warning") {
+            // First attempt on someone else's account: warning only
+            let wMsg = safeMsg(data.message, "This is someone else's account. Do not try it. If you try again, your account will be disabled and your device will be blocked.");
+            document.getElementById("loginStatus").innerHTML = `<div style="background:#fff3cd;border:2px solid #f0ad4e;color:#7a4b00;padding:10px;border-radius:8px;font-weight:bold;">⚠️ WARNING ⚠️<br>${escapeHtml(wMsg)}</div>`;
+            document.getElementById("password").value = "";
+        } else if(data && data.status === "locked") {
+            // Account locked by the server after repeated wrong passwords - only the Admin can unlock it
+            let lockMsg = safeMsg(data.message, "Account locked after too many wrong attempts. Admin approval is required.");
+            document.getElementById("loginStatus").innerHTML = `${escapeHtml(lockMsg)}<br>Contact Admin: <a href="tel:${ADMIN_MOBILE_NUMBER}" style="color:#0b3d91;font-weight:bold;text-decoration:underline;">${ADMIN_MOBILE_NUMBER}</a>`;
         } else {   
             document.getElementById("loginStatus").innerText = safeMsg(data.message, "Invalid Login ❌");   
         }   
     })  
     .catch(() => {   
-        document.getElementById("loginStatus").innerText = "Connection Error (Offline Login) ⚠️";
-        let cachedUser = safeJSONParse(localStorage.getItem("currentUser"), null);
-        if(cachedUser && cachedUser.username && cachedUser.username.toLowerCase() === u.toLowerCase()) {
-            showApp();
-        }
+        document.getElementById("loginStatus").innerText = "Connection Error - internet is required to log in ⚠️";
+        // Security: no password-less offline login. An internet connection is required to log in.
     });  
 }  
 
@@ -1334,8 +1459,8 @@ function resetPasswordAction() {
     let username = document.getElementById("fp_username").value.trim();
     let newPassword = document.getElementById("fp_new_password").value.trim();
 
-    if(!newPassword) {
-        setFpStatus("Please enter a new password! ❌", false);
+    if(newPassword.length < 8) {
+        setFpStatus("New password must be at least 8 characters! ❌", false);
         return;
     }
 
@@ -1427,7 +1552,7 @@ function showApp(){
     document.getElementById("appBox").style.display="block";  
     let user = safeJSONParse(localStorage.getItem("currentUser"), {username: 'User', role: 'User'});  
     let username = user.username ? user.username.toLowerCase() : 'user';  
-    document.getElementById("userInfoText").innerHTML = `Logged in as <b>${user.username}</b> (${user.role})`;  
+    document.getElementById("userInfoText").innerHTML = `Logged in as <b>${escapeHtml(user.username)}</b> (${escapeHtml(user.role)})`;  
     startUserInfoClock();
     
     loadAssistants();  
@@ -1480,7 +1605,7 @@ function fetchUserLiveSheetData() {
     let liveStatusEl = document.getElementById("userLiveStatus");
     if(liveStatusEl) liveStatusEl.innerText = "🟡 Checking...";
 
-    return fetch(ADMIN_DATA_URL)
+    return fetch(ADMIN_DATA_URL + "?user=" + encodeURIComponent(user.username))   // only this user's records
     .then(res => { if(!res.ok) throw new Error("Server Error"); return res.text(); })
     .then(text => {
         let data = safeJSONParse(text, null);
@@ -1559,7 +1684,7 @@ function fetchUserLiveSheetData() {
 function loadAssistants(){  
     let sel = document.getElementById("assistant");  
     let current = safeJSONParse(localStorage.getItem("currentUser"), {username: 'User'});  
-    sel.innerHTML = `<option>${current.username}</option>`;  
+    sel.innerHTML = `<option>${escapeHtml(current.username)}</option>`;  
 }  
 
 // ACCOUNT NUMBER FORMATTER — ONE STANDARD FOR ALL ACCOUNT FIELDS
@@ -1709,18 +1834,15 @@ function sendDataMismatchRequest(isSilent = false) {
                 return;
             }
 
-            Promise.all(requestsToSend.map(reqStr => fetch(REQUESTS_URL, {
-                method: "POST",
-                body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: reqStr })
-            }))).then(() => {
+            Promise.all(requestsToSend.map(reqStr => postRequest({ username: user.username, requestedReason: reqStr }))).then(() => {
                 let msg = `${requestsToSend.length} Mismatch requests sent to Admin ✉️✅`;
                 if (statusElem) statusElem.innerText = `🟢 ${msg} (${getTimeString()})`;
                 if (!isSilent) {
                     alert(msg);
                     setStatus(msg);
                 }
-            }).catch(() => {
-                if (!isSilent) setStatus("Request failed ❌");
+            }).catch((err) => {
+                if (!isSilent) setStatus((err && err.message ? err.message + " " : "Request failed ") + "❌");
             }).finally(() => { 
                 resetManualBtnState(manualBtn); 
                 isAutoSending = false; 
@@ -1745,7 +1867,7 @@ function submitPasswordChange() {
     let confirmPass = document.getElementById("confirmPassword").value.trim();
     
     if(!oldPass || !newPass || !confirmPass) { alert("Please fill all fields! ❌"); return; }
-    if(newPass.length < 4) { alert("New password must be at least 4 characters! ❌"); return; }
+    if(newPass.length < 8) { alert("New password must be at least 8 characters! ❌"); return; }
     if(newPass !== confirmPass) { alert("Passwords do not match! ❌"); return; }
 
     let btn = document.getElementById("changePassBtn");
@@ -1795,10 +1917,7 @@ function submitReasonRequest() {
     sendBtn.disabled = true;
     sendBtn.innerText = "Sending... ⏳";
     
-    fetch(REQUESTS_URL, {
-        method: "POST",
-        body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: requestPayload })
-    })
+    postRequest({ username: user.username, requestedReason: requestPayload })
     .then(() => {
         alert("Request sent successfully to Admin! ✉️✅");
         reqInput.value = "";
@@ -1807,7 +1926,7 @@ function submitReasonRequest() {
         newCatInput.value = "";
         newCatInput.style.display = "none";
     })
-    .catch(() => alert("Failed to send request. ❌"))
+    .catch((err) => alert((err && err.message ? err.message : "Failed to send request.") + " ❌"))
     .finally(() => {
         sendBtn.disabled = false;
         sendBtn.innerText = "Send Request";
@@ -2108,18 +2227,18 @@ function renderEntriesLog() {
             ? `<span style="color:#28a745; font-weight:bold; font-size:10px;">🟢 In Sheet</span>`
             : `<span style="color:#dc3545; font-weight:bold; font-size:10px;">🔴 Pending</span>`;
 
-        let editBtn = `<button onclick="openEditModal('${searchKey}')" class="compact-btn" style="background:#ffc107; color:black; padding:2px 6px !important; font-size:10px !important; margin:2px 0 0 0;">Edit 🖊️</button>`;
+        let editBtn = `<button onclick="openEditModal('${jsArg(searchKey)}')" class="compact-btn" style="background:#ffc107; color:black; padding:2px 6px !important; font-size:10px !important; margin:2px 0 0 0;">Edit 🖊️</button>`;
 
         logBox.innerHTML += `<div style="padding:6px 0; border-bottom:1px dashed #ddd;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <b>ID: ${itemId || 'N/A'}</b>
+                <b>ID: ${escapeHtml(itemId || 'N/A')}</b>
                 <div>
                     ${statusBadge}
                     ${editBtn}
                 </div>
             </div>
-            <b>Acc: ${itemAcc}</b><br>
-            <span style="font-size:11px; color:#666;">${item.reason || ''}</span>
+            <b>Acc: ${escapeHtml(itemAcc)}</b><br>
+            <span style="font-size:11px; color:#666;">${escapeHtml(item.reason || '')}</span>
         </div>`;
     });
 }
@@ -2189,11 +2308,7 @@ function saveModalEdit() {
 
     setStatus("Sending edit request to Admin... ⏳");
 
-    fetch(REQUESTS_URL, {
-        method: "POST",
-        body: new URLSearchParams({ action: "addRequest", username: user.username, requestedReason: editRequestStr })
-    })
-    .then(res => res.text())
+    postRequest({ username: user.username, requestedReason: editRequestStr })
     .then(() => {
         item.account = newAcc;
         item.reason = newReason;
@@ -2212,8 +2327,8 @@ function saveModalEdit() {
         alert("Edit request sent successfully to Admin and updated locally! ✅✉️");
         setStatus("Edit request sent successfully ✅");
     })
-    .catch(() => {
-        alert("Failed to send edit request to Admin! ❌");
+    .catch((err) => {
+        alert((err && err.message ? err.message : "Failed to send edit request to Admin!") + " ❌");
         setStatus("Edit request failed ❌");
     });
 }
@@ -2233,10 +2348,10 @@ function renderDownloadTable() {
 
     [...FILTERED_SHEET_DATA].reverse().forEach(item => {
         tbody.innerHTML += `<tr>
-            <td><b>${item.dataId || '-'}</b></td>
-            <td><b>${item.account || ''}</b></td>
-            <td>${item.reason || ''}</td>
-            <td>${item.date || ''}</td>
+            <td><b>${escapeHtml(item.dataId || '-')}</b></td>
+            <td><b>${escapeHtml(item.account || '')}</b></td>
+            <td>${escapeHtml(item.reason || '')}</td>
+            <td>${escapeHtml(item.date || '')}</td>
         </tr>`;
     });
 }
@@ -2431,7 +2546,7 @@ function isDuplicate(data){
 }    
     
 function sendToServer(data, timeoutMs = 15000){    
-    let queryString = new URLSearchParams(data).toString();
+    let queryString = new URLSearchParams(Object.assign({}, data, { token: getAuthToken() })).toString();   // token added at send time only
     return Promise.race([
         fetch(DATA_URL + "?" + queryString).then(res => {
             if(!res.ok) throw new Error("Server Error");
@@ -4321,8 +4436,10 @@ const MD = (function () {
 
   /* ---------- server ---------- */
   function api(params, post) {
-    if (post) return fetch(SCRIPT_URL, { method: 'POST', body: new URLSearchParams(params) }).then(r => r.json());
-    return fetch(SCRIPT_URL + '?' + new URLSearchParams(Object.assign({ _t: Date.now() }, params))).then(r => { if (!r.ok) throw new Error('Server Error'); return r.json(); });
+    // login token is added at send time for every call (needed by the server's security check)
+    const withToken = Object.assign({}, params, { token: getAuthToken() });
+    if (post) return fetch(SCRIPT_URL, { method: 'POST', body: new URLSearchParams(withToken) }).then(r => r.json());
+    return fetch(SCRIPT_URL + '?' + new URLSearchParams(Object.assign({ _t: Date.now() }, withToken))).then(r => { if (!r.ok) throw new Error('Server Error'); return r.json(); });
   }
   const sendEntry = (e, ms) => timeout(api(Object.assign(pick(e), { action: 'save', user: user }), false), ms);
 
