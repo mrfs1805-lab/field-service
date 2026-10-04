@@ -1010,7 +1010,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         <select id="modalEditReason"></select>
 
         <div style="display:flex; gap:8px; margin-top:15px;">
-            <button onclick="saveModalEdit()" style="background:#28a745; flex:1;">Save & Request 💾</button>
+            <button id="modalEditSaveBtn" onclick="saveModalEdit()" style="background:#28a745; flex:1;">Save & Request 💾</button>
             <button onclick="closeEditModal()" style="background:#dc3545; flex:1;">Cancel ❌</button>
         </div>
     </div>
@@ -1029,7 +1029,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
             <input type="date" id="md_eDate">
         </div>
         <div style="display:flex; gap:8px; margin-top:15px;">
-            <button onclick="MD.saveEdit()" style="background:#28a745; flex:1;">Save & Request 💾</button>
+            <button id="md_eSaveBtn" onclick="MD.saveEdit()" style="background:#28a745; flex:1;">Save & Request 💾</button>
             <button onclick="MD.closeEdit()" style="background:#dc3545; flex:1;">Cancel ❌</button>
         </div>
     </div>
@@ -2264,9 +2264,17 @@ function openEditModal(identifier) {
 function closeEditModal() {
     document.getElementById("editModalOverlay").style.display = "none";
     currentEditingItemIdentifier = null;
+    if (!EDIT_REQUEST_SENDING) setEditSaveBusy_(false);
 }
 
+let EDIT_REQUEST_SENDING = false;   // blocks a second tap while the first request is still in flight
+function setEditSaveBusy_(busy) {
+    EDIT_REQUEST_SENDING = busy;
+    const b = document.getElementById("modalEditSaveBtn");
+    if (b) { b.disabled = busy; b.style.opacity = busy ? "0.6" : ""; }
+}
 function saveModalEdit() {
+    if (EDIT_REQUEST_SENDING) return;
     const accountInput = document.getElementById("modalEditAccount");
     const newAcc = formatAccountNumber(accountInput.value);
     accountInput.value = newAcc;
@@ -2307,6 +2315,7 @@ function saveModalEdit() {
     let editRequestStr = `[EDIT_ENTRY]|ID:${item.dataId || 'N/A'}|OldAcc:${item.account}|NewAcc:${newAcc}|OldReason:${item.reason}|NewReason:${newReason}|Date:${item.date || getLocalDateString()}`;
 
     setStatus("Sending edit request to Admin... ⏳");
+    setEditSaveBusy_(true);
 
     postRequest({ username: user.username, requestedReason: editRequestStr })
     .then(() => {
@@ -2330,7 +2339,8 @@ function saveModalEdit() {
     .catch((err) => {
         alert((err && err.message ? err.message : "Failed to send edit request to Admin!") + " ❌");
         setStatus("Edit request failed ❌");
-    });
+    })
+    .finally(() => { setEditSaveBusy_(false); });
 }
 
 function renderDownloadTable() {
@@ -2656,7 +2666,9 @@ document.addEventListener("visibilitychange", () => {
 // 3) Periodic retry - covers "online" flag being true but no real internet earlier
 setInterval(autoSyncIfNeeded, 15000);
 
+let FORM_SENDING = false;   // blocks a second tap while the first submit is still in flight
 function submitForm(){    
+    if (FORM_SENDING) return;
     let current = safeJSONParse(localStorage.getItem("currentUser"), null);    
     if(!current || !current.username) { setStatus("Please login again ❌"); return; }
 
@@ -2729,6 +2741,7 @@ function submitForm(){
     }      
 
     setStatus("Saving... ⏳");    
+    FORM_SENDING = true;
     sendToServer(data, 15000)   
     .then((resData)=>{    
         if(resData && resData.success) {
@@ -2763,7 +2776,8 @@ function submitForm(){
         document.getElementById("reason").value = "";    
         document.getElementById("date").value = getLocalDateString();  
         updateAccountPrefix();
-    });    
+    })
+    .finally(()=>{ FORM_SENDING = false; });
 }    
 
 function downloadPDF() {
@@ -4655,13 +4669,15 @@ const MD = (function () {
     $('mdEditOverlay').style.display = 'flex';
   }
   function closeEdit() { $('mdEditOverlay').style.display = 'none'; editing = null; }
+  let editSending = false;   // blocks a second tap while the first request is still in flight
   async function saveEdit() {
-    if (!editing) return;
+    if (!editing || editSending) return;
     const rec = editing, account = fmt($('md_eAccount').value), value = $('md_eValue').value;
     if (account.replace(/\D/g, '').length !== 12) return alert('Account Number must contain exactly 12 digits (2/2/3/3/2) ❌');
     if (!value) return alert('Value cannot be empty! ❌');
     const fields = { account: account, value: value };
     if (rec.type === 'docket') { fields.changeDate = $('md_eDate').value; if (!fields.changeDate) return alert('Select Change Date ❌'); }
+    editSending = true; { const b = $('md_eSaveBtn'); if (b) { b.disabled = true; b.style.opacity = '0.6'; } }
     try {
       setStatus('Sending edit request to Admin... ⏳');
       const r = await api({ action: 'addRequest', user: user, kind: 'Edit', dataId: rec.dataId, payload: JSON.stringify({ fields: fields, record: pick(rec) }) }, true);
@@ -4670,6 +4686,7 @@ const MD = (function () {
       save(); renderLog(); stats(); closeEdit();
       alert('Edit request sent successfully to Admin and updated locally! ✅✉️'); setStatus('Edit request sent successfully ✅');
     } catch (e) { alert('Failed to send edit request to Admin! ❌'); setStatus('Edit request failed ❌'); }
+    finally { editSending = false; const b = $('md_eSaveBtn'); if (b) { b.disabled = false; b.style.opacity = ''; } }
   }
 
   /* ---------- download tab ---------- */
