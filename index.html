@@ -1605,7 +1605,7 @@ function fetchUserLiveSheetData() {
     let liveStatusEl = document.getElementById("userLiveStatus");
     if(liveStatusEl) liveStatusEl.innerText = "🟡 Checking...";
 
-    return fetch(ADMIN_DATA_URL + "?user=" + encodeURIComponent(user.username))   // only this user's records
+    return fetch(ADMIN_DATA_URL + "?user=" + encodeURIComponent(user.username) + "&token=" + encodeURIComponent(getAuthToken()))   // only this user's records (login token checked by the server)
     .then(res => { if(!res.ok) throw new Error("Server Error"); return res.text(); })
     .then(text => {
         let data = safeJSONParse(text, null);
