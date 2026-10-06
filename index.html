@@ -1206,11 +1206,16 @@ let CURRENT_ACTIVE_TAB = 1;
 
 function switchTab(tabIndex) {
     const TAB_INDEX_TO_ID = {1:'tab-data-enter',2:'tab-settings',3:'tab-download',4:'tab-summary',5:'tab-advance'};
+    // Admin-controlled access: a tab the admin has not given to this user can never open
+    if(typeof isTabBlocked === 'function' && isTabBlocked(TAB_INDEX_TO_ID[tabIndex])){
+        tabIndex = getDefaultTabIndex();
+    }
     if(typeof getHiddenTabs === 'function' && typeof TAB_VISIBILITY_CONFIG !== 'undefined'){
         const configurableIds = TAB_VISIBILITY_CONFIG.map(c => c.key);
         const targetId = TAB_INDEX_TO_ID[tabIndex];
         if(configurableIds.includes(targetId) && getHiddenTabs().includes(targetId)){
             tabIndex = 1;
+            if(typeof isTabBlocked === 'function' && isTabBlocked(TAB_INDEX_TO_ID[1])) tabIndex = getDefaultTabIndex();
         }
     }
     CURRENT_ACTIVE_TAB = tabIndex;
@@ -1400,7 +1405,7 @@ function login(){
 
         if(isSuccess) {   
             let today = getLocalDateString();  
-            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today, token: data.token || "" }));   
+            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today, token: data.token || "", access: String(data.access || "").toLowerCase() }));   
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
         } else if(data && data.status === "pending_approval") {
@@ -1436,9 +1441,11 @@ function verifyUserMobile() {
 
     setFpStatus("Verifying... ⏳", true);
 
-    fetch(USER_MANAGEMENT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "verifyUser", username: username, mobile: mobile })
+    Promise.all([getDeviceIds(), getDeviceModel()]).then(function(r){
+        return fetch(USER_MANAGEMENT_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "verifyUser", username: username, mobile: mobile, deviceId: r[0][0], fpStrong: r[0][1], deviceModel: r[1] })
+        });
     })
     .then(res => res.json())
     .then(result => {
@@ -1446,6 +1453,9 @@ function verifyUserMobile() {
             setFpStatus("Verified! Enter new password. ✅", true);
             document.getElementById("fpVerifySection").style.display = "none";
             document.getElementById("fpNewPasswordSection").style.display = "block";
+        } else if(result.status === "warning" || result.status === "locked") {
+            setFpStatus(safeMsg(result.message, "This is not your account ❌"), false);
+            alert(safeMsg(result.message, "This is not your account ❌"));
         } else {
             setFpStatus("Invalid Username or Mobile Number! ❌", false);
         }
@@ -1466,13 +1476,18 @@ function resetPasswordAction() {
 
     setFpStatus("Saving new password... ⏳", true);
 
-    fetch(USER_MANAGEMENT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "resetPassword", username: username, newPassword: newPassword, mobile: document.getElementById("fp_mobile").value.trim() })
+    Promise.all([getDeviceIds(), getDeviceModel()]).then(function(r){
+        return fetch(USER_MANAGEMENT_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "resetPassword", username: username, newPassword: newPassword, mobile: document.getElementById("fp_mobile").value.trim(), deviceId: r[0][0], fpStrong: r[0][1], deviceModel: r[1] })
+        });
     })
     .then(res => res.json())
     .then(result => {
-        if(result.status === "success") {
+        if(result.status === "warning" || result.status === "locked") {
+            setFpStatus(safeMsg(result.message, "This is not your account ❌"), false);
+            alert(safeMsg(result.message, "This is not your account ❌"));
+        } else if(result.status === "success") {
             alert("New password saved successfully! Please login. ✅");
             toggleForgotPassword(false);
             document.getElementById("fp_username").value = "";
@@ -1577,7 +1592,8 @@ function showApp(){
     
     loadPrefixes();
     checkLiveReset();
-    fetchUserLiveSheetData(); 
+    // Advanced-only users have no Home/Download tab, so no live sheet fetch for them
+    if (getUserAccess() !== 'advanced') fetchUserLiveSheetData(); 
 
     // Advance Programme tab's selectors are built once at page load, before
     // login (when the user is still "Guest"), so its auto-load silently does
@@ -1586,15 +1602,18 @@ function showApp(){
     // of only appearing after the page is refreshed.
     if (typeof advAutoFillProfile === 'function') advAutoFillProfile();
 
-    if (!userAutoRequestInterval) {
+    if (userAutoRequestInterval) { clearInterval(userAutoRequestInterval); userAutoRequestInterval = null; }
+    if (getUserAccess() !== 'advanced' && !userAutoRequestInterval) {
         userAutoRequestInterval = setInterval(() => {
+            if (getUserAccess() === 'advanced') return;
             if (!LIVE_CHECK_ALLOWED_TABS.includes(CURRENT_ACTIVE_TAB)) return;
             if (window.MD && MD.active()) return;
             sendDataMismatchRequest(true);
         }, 30000); 
     }
 
-    switchTab(1); 
+    applyTabVisibility();
+    switchTab(getDefaultTabIndex()); 
     setTimeout(autoSyncIfNeeded, 1500);
 }  
 
@@ -1898,6 +1917,7 @@ function submitPasswordChange() {
 }
 
 function submitReasonRequest() {
+  if (typeof getUserAccess === "function" && getUserAccess() === "advanced") return;   // no Home + Download access
     let user = safeJSONParse(localStorage.getItem("currentUser"), null);
     if(!user || !user.username) return;
 
@@ -2641,6 +2661,7 @@ let LAST_REASONS_FETCH = 0;
 let REASONS_FETCHING = false;
 function autoRefreshReasons(force) {
     if (REASONS_FETCHING) return;
+    if (typeof getUserAccess === 'function' && getUserAccess() === 'advanced') return;   // Reasons are only used on Home
     if (!navigator.onLine) return;
     let u = safeJSONParse(localStorage.getItem("currentUser"), null);
     if (!u || !u.username) return;
@@ -4337,11 +4358,43 @@ const TAB_VISIBILITY_CONFIG = [
   { key: 'tab-summary', btnId: 'btn-tab-4', label: 'Monthly Summary 📊' }
 ];
 
+/* ===== Admin-controlled access =====
+ * Admin sets one value per user (Users tab in the admin panel):
+ *   basic    -> Home + Download
+ *   advanced -> Monthly Summary + Advance Programme
+ *   all      -> everything
+ * Settings is always available. The value comes from the server at login (data.access). */
+const DEFAULT_ACCESS = 'basic';   // used when the admin has not set anything for this user
+const ACCESS_GROUPS = {
+  basic:    ['tab-data-enter','tab-download'],
+  advanced: ['tab-summary','tab-advance']
+};
+const ALL_TAB_BUTTONS = {
+  'tab-data-enter':'btn-tab-1', 'tab-download':'btn-tab-3',
+  'tab-advance':'btn-tab-5',    'tab-summary':'btn-tab-4'
+};
+function getUserAccess(){
+  const u = safeJSONParse(localStorage.getItem('currentUser'), null);
+  const a = String((u && u.access) || '').toLowerCase();
+  return (a==='basic' || a==='advanced' || a==='all') ? a : DEFAULT_ACCESS;
+}
+function getAllowedTabIds(){
+  const a = getUserAccess();
+  let ids = ['tab-settings'];
+  if(a==='basic'    || a==='all') ids = ids.concat(ACCESS_GROUPS.basic);
+  if(a==='advanced' || a==='all') ids = ids.concat(ACCESS_GROUPS.advanced);
+  return ids;
+}
+function isTabBlocked(tabId){ return !!tabId && !getAllowedTabIds().includes(tabId); }
+function getDefaultTabIndex(){ return getUserAccess()==='advanced' ? 4 : 1; }
+
 function getHiddenTabs(){
   try{
     const raw = localStorage.getItem('HIDDEN_TABS');
     if(raw === null){
-      // First run on this device: start with only Home + Settings visible.
+      // First run on this device: start with only Home + Settings visible
+      // (advanced-only users have nothing else, so show their tabs).
+      if(getUserAccess()==='advanced') return [];
       return TAB_VISIBILITY_CONFIG.map(c => c.key);
     }
     return JSON.parse(raw);
@@ -4355,14 +4408,21 @@ function saveHiddenTabs(arr){
 }
 
 function applyTabVisibility(){
-  const hidden = getHiddenTabs();
-  TAB_VISIBILITY_CONFIG.forEach(cfg => {
-    const btn = document.getElementById(cfg.btnId);
-    if(btn) btn.style.display = hidden.includes(cfg.key) ? 'none' : '';
+  // "Request New Reason" box (Settings): only for users who have Home + Download
+  const reqBox = document.getElementById('userRequestContainer');
+  if(reqBox) reqBox.style.display = (getUserAccess()==='advanced') ? 'none' : '';
+  const localHidden = getHiddenTabs();
+  const hidden = [];
+  Object.keys(ALL_TAB_BUTTONS).forEach(id => {
+    const isConfigurable = TAB_VISIBILITY_CONFIG.some(c => c.key === id);
+    const off = isTabBlocked(id) || (isConfigurable && localHidden.includes(id));
+    if(off) hidden.push(id);
+    const btn = document.getElementById(ALL_TAB_BUTTONS[id]);
+    if(btn) btn.style.display = off ? 'none' : '';
   });
   const activeContent = document.querySelector('.tab-content.active');
   if(activeContent && hidden.includes(activeContent.id) && typeof switchTab === 'function'){
-    switchTab(1);
+    switchTab(getDefaultTabIndex());
   }
 }
 
@@ -4382,7 +4442,7 @@ function renderTabVisibilityControls(){
   const container = document.getElementById('tabVisibilityContainer');
   if(!container) return;
   const hidden = getHiddenTabs();
-  container.innerHTML = TAB_VISIBILITY_CONFIG.map(cfg => {
+  container.innerHTML = TAB_VISIBILITY_CONFIG.filter(cfg => !isTabBlocked(cfg.key)).map(cfg => {
     const isHidden = hidden.includes(cfg.key);
     return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #e5e7eb;">
       <div>
@@ -4465,6 +4525,7 @@ const MD = (function () {
   function saveMode() { if (user) sv(modeKey(user), { mode: on ? 'md' : 'home', date: today() }); }
   function restore() {
     if (on) return;
+    if (typeof getUserAccess === 'function' && getUserAccess() === 'advanced') return;
     const u = currentUser(); if (!u) return;
     const m = ls(modeKey(u), null);
     if (!m) return;
