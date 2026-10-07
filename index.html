@@ -395,6 +395,16 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 .mdSwitch{display:inline-flex; flex:0 0 auto; border:1px solid #007bff; border-radius:14px; overflow:hidden; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;}
 .mdSwitch span{font-size:9px; font-weight:bold; padding:6px 7px; color:#007bff; background:#fff; white-space:nowrap; line-height:1.1;}
 .mdSwitch span.on{background:#007bff; color:#fff;}
+.mdSwitch{position:relative; z-index:60;}
+#btn-tab-6{position:relative;}
+.maintDot{position:absolute; top:2px; right:2px; width:9px; height:9px; border-radius:50%; background:#dc3545; display:none;}
+.maintToast{position:fixed; left:50%; bottom:80px; transform:translateX(-50%); width:88%; max-width:420px; box-sizing:border-box; background:#fff3cd; border:2px solid #f0ad4e; color:#7a4b00; font-size:13px; font-weight:bold; padding:10px 12px; border-radius:10px; text-align:center; z-index:10000; display:none;}
+.mdSwitch span.mdLocked{opacity:.5;}
+.mdSwitch span.mdLocked::after{content:" \1F512";}
+.maintLockedBtn{opacity:.45; pointer-events:none;}
+.maintLockedBtn::after{content:" \1F512";}
+.maintLock{position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,.93); z-index:50; display:flex; justify-content:center; align-items:flex-start; padding:60px 12px 0; box-sizing:border-box; border-radius:8px;}
+.maintLockBox{background:#fff3cd; border:2px solid #f0ad4e; color:#7a4b00; font-weight:bold; font-size:14px; padding:14px; border-radius:10px; text-align:center; max-width:320px;}
 .mdFixed{font-weight:bold; background:#f0f0f0; color:#222;}
 </style>  
 </head>  
@@ -402,6 +412,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 
 <!-- Login Box -->
 <div class="container" id="loginBox">  
+    <div id="maintLoginNote" style="display:none; background:#fff3cd; border:2px solid #f0ad4e; color:#7a4b00; padding:10px; border-radius:8px; font-size:13px; font-weight:bold; text-align:center; margin-bottom:10px;"></div>
     <h2 style="text-align: center; color: #007bff; margin-top: 0;">MR Field Service</h2>  
     
     <div id="loginFormSection">
@@ -978,6 +989,12 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         </div>
     </div>
 
+    <!-- Notifications Tab (shown only while a maintenance notice is active) -->
+    <div id="tab-notify" class="tab-content">
+        <h2 style="margin-top:0; color:#f0ad4e;">Notifications 🔔</h2>
+        <div id="notifyBody"></div>
+    </div>
+
     <!-- Bottom Navigation Bar -->
     <div class="bottom-nav" id="bottomNavBar">
         <button class="nav-item active" onclick="switchTab(1)" id="btn-tab-1">
@@ -991,6 +1008,10 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         </button>
         <button class="nav-item" onclick="switchTab(4)" id="btn-tab-4" title="Monthly Summary">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </button>
+        <button class="nav-item" onclick="switchTab(6)" id="btn-tab-6" title="Notifications" style="display:none;">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+            <span class="maintDot"></span>
         </button>
         <button class="nav-item" onclick="switchTab(2)" id="btn-tab-2">
             <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0-.43-.17-.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6-3.6z"/></svg>
@@ -1205,7 +1226,7 @@ const LIVE_CHECK_ALLOWED_TABS = [1, 3];
 let CURRENT_ACTIVE_TAB = 1;
 
 function switchTab(tabIndex) {
-    const TAB_INDEX_TO_ID = {1:'tab-data-enter',2:'tab-settings',3:'tab-download',4:'tab-summary',5:'tab-advance'};
+    const TAB_INDEX_TO_ID = {1:'tab-data-enter',2:'tab-settings',3:'tab-download',4:'tab-summary',5:'tab-advance',6:'tab-notify'};
     // Admin-controlled access: a tab the admin has not given to this user can never open
     if(typeof isTabBlocked === 'function' && isTabBlocked(TAB_INDEX_TO_ID[tabIndex])){
         tabIndex = getDefaultTabIndex();
@@ -1241,6 +1262,9 @@ function switchTab(tabIndex) {
     } else if(tabIndex === 5) {
         document.getElementById('tab-advance').classList.add('active');
         document.getElementById('btn-tab-5').classList.add('active');
+    } else if(tabIndex === 6) {
+        document.getElementById('tab-notify').classList.add('active');
+        document.getElementById('btn-tab-6').classList.add('active');
     }
 }
 
@@ -1405,7 +1429,8 @@ function login(){
 
         if(isSuccess) {   
             let today = getLocalDateString();  
-            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today, token: data.token || "", access: String(data.access || "").toLowerCase() }));   
+            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today, token: data.token || "", access: String(data.access || "").toLowerCase() }));
+            try { localStorage.setItem("LAST_ACCESS", String(data.access || "").toLowerCase()); } catch(e) {}   
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
         } else if(data && data.status === "pending_approval") {
@@ -1506,6 +1531,7 @@ function resetPasswordAction() {
 
 function logout(){  
     if(userAutoRequestInterval) clearInterval(userAutoRequestInterval);
+    if (typeof maintRender === 'function') setTimeout(maintRender, 0);
     localStorage.removeItem("currentUser");  
     // REASONS (and the selected Title) are intentionally kept in localStorage
     // across logout - this is also what the 11:59 PM daily reset calls
@@ -1569,6 +1595,8 @@ function showApp(){
     let username = user.username ? user.username.toLowerCase() : 'user';  
     document.getElementById("userInfoText").innerHTML = `Logged in as <b>${escapeHtml(user.username)}</b> (${escapeHtml(user.role)})`;  
     startUserInfoClock();
+    if (typeof maintRender === 'function') maintRender();
+    if (typeof maintCheck === 'function') maintCheck(false);
     
     loadAssistants();  
     renderReasonsDropdown();         
@@ -1607,7 +1635,7 @@ function showApp(){
         userAutoRequestInterval = setInterval(() => {
             if (getUserAccess() === 'advanced') return;
             if (!LIVE_CHECK_ALLOWED_TABS.includes(CURRENT_ACTIVE_TAB)) return;
-            if (window.MD && MD.active()) return;
+            if (typeof MD !== 'undefined' && MD.active()) return;
             sendDataMismatchRequest(true);
         }, 30000); 
     }
@@ -4380,7 +4408,7 @@ function getUserAccess(){
 }
 function getAllowedTabIds(){
   const a = getUserAccess();
-  let ids = ['tab-settings'];
+  let ids = ['tab-settings','tab-notify'];
   if(a==='basic'    || a==='all') ids = ids.concat(ACCESS_GROUPS.basic);
   if(a==='advanced' || a==='all') ids = ids.concat(ACCESS_GROUPS.advanced);
   return ids;
@@ -4510,6 +4538,7 @@ const MD = (function () {
 
   /* ---------- server ---------- */
   function api(params, post) {
+    if (window.MAINT_LOCK && window.MAINT_LOCK.home_meter) return Promise.reject(new Error('Maintenance'));
     // login token is added at send time for every call (needed by the server's security check)
     const withToken = Object.assign({}, params, { token: getAuthToken() });
     if (post) return fetch(SCRIPT_URL, { method: 'POST', body: new URLSearchParams(withToken) }).then(r => r.json());
@@ -4667,6 +4696,7 @@ const MD = (function () {
   }
   async function tick() {
     if (!on) return;
+    if (window.MAINT_LOCK && window.MAINT_LOCK.home_meter) return;   // Meter / Docket is under maintenance
     if (typeof LIVE_CHECK_ALLOWED_TABS !== 'undefined' && !LIVE_CHECK_ALLOWED_TABS.includes(CURRENT_ACTIVE_TAB)) return;
     if (QUEUE.length) await sync(true);
     liveCheck(true);
@@ -4800,6 +4830,211 @@ const MD = (function () {
     toggle, onTitle, submit, sync, liveCheck, setFilter, openEdit, closeEdit, saveEdit,
     applyFilter, resetFilter, pdfToday, pdfFiltered, csvFiltered, active: () => on
   };
+})();
+</script>
+<script>
+// Server maintenance: selected areas are locked (only for users whose access includes them) and the
+// notice lives in its own Notifications tab, which appears only while maintenance is ON.
+(function () {
+  var CACHE_KEY = "MAINT_CACHE", SEEN_KEY = "MAINT_SEEN", lastCheck = 0, cached = null, NOTE = "", expiryTimer = null, toastedId = "";
+  var LABELS = { home_data: "Data Entry", home_reasons: "Reasons", home_meter: "Meter & Docket Management", adv_summary: "Monthly Summary", adv_program: "Advance Programme" };
+  var TAB_IDS = { 1: "tab-data-enter", 2: "tab-settings", 3: "tab-download", 4: "tab-summary", 5: "tab-advance" };
+  window.MAINT_LOCK = {};
+  function L() { return window.MAINT_LOCK; }
+  function g(id) { return document.getElementById(id); }
+  function loggedIn() { var u = safeJSONParse(localStorage.getItem("currentUser"), null); return !!(u && u.username); }
+  function accessNow() {
+    var u = safeJSONParse(localStorage.getItem("currentUser"), null);
+    var a = u && u.username ? String(u.access || "").toLowerCase() : String(localStorage.getItem("LAST_ACCESS") || "").toLowerCase();
+    if (a === "basic" || a === "advanced" || a === "all") return a;
+    return (u && u.username) ? "basic" : "all";   // unknown phone on the login page: show everything
+  }
+  function relevant(items) {
+    var a = accessNow();
+    return (items || []).filter(function (k) {
+      if (k.indexOf("home_") === 0) return a !== "advanced";
+      if (k.indexOf("adv_") === 0) return a !== "basic";
+      return false;
+    });
+  }
+  // "now" on the server's clock, so a wrong phone clock cannot end or extend the maintenance
+  function nowMs() { return Date.now() + ((cached && cached.skew) || 0); }
+  function activeItems() {
+    var m = cached && cached.m;
+    if (!m || !m.active || Date.now() - cached.t > 30 * 60 * 1000) return [];
+    if (!m.endsAt || nowMs() >= m.endsAt) return [];   // auto-stop at the finish time
+    NOTE = m.note || "";
+    return relevant(m.items);
+  }
+  function fmtEnd(ms) {
+    var d = new Date(ms), t = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (d.toDateString() !== new Date().toDateString()) t = d.toLocaleDateString([], { day: "2-digit", month: "short" }) + " " + t;
+    return t;
+  }
+  function msg(label) { return "\uD83D\uDEE0\uFE0F " + label + " is under maintenance. Please wait until it ends." + (NOTE ? " " + NOTE : ""); }
+  function names(rel) { return rel.map(function (k) { return LABELS[k]; }).join(", "); }
+  function setOverlay(el, on, text) {
+    if (!el) return;
+    var o = null;
+    for (var i = 0; i < el.children.length; i++) { if (el.children[i].classList.contains("maintLock")) { o = el.children[i]; break; } }
+    if (!on) { if (o) o.remove(); return; }
+    if (getComputedStyle(el).position === "static") el.style.position = "relative";
+    if (!o) {
+      o = document.createElement("div"); o.className = "maintLock";
+      var b = document.createElement("div"); b.className = "maintLockBox"; o.appendChild(b); el.appendChild(o);
+    }
+    o.firstChild.textContent = text;
+  }
+  function tabLocked(i) { return (i === 4 && L().adv_summary) || (i === 5 && L().adv_program); }
+  function firstOpenTab() {
+    var order = [4, 5, 1, 3, 2];
+    for (var n = 0; n < order.length; n++) {
+      var i = order[n], btn = g("btn-tab-" + i);
+      if (tabLocked(i)) continue;
+      if (typeof isTabBlocked === "function" && isTabBlocked(TAB_IDS[i])) continue;
+      if (btn && btn.style.display === "none") continue;
+      return i;
+    }
+    return 0;
+  }
+  function apply() {
+    var items = activeItems(), lock = {};
+    items.forEach(function (k) { lock[k] = true; });
+    window.MAINT_LOCK = lock;
+    setOverlay(g("homeEntryWrap"), lock.home_data, msg(LABELS.home_data));
+    setOverlay(g("homeDownloadWrap"), lock.home_data, msg(LABELS.home_data));
+    setOverlay(g("mdEntryWrap"), lock.home_meter, msg(LABELS.home_meter));
+    setOverlay(g("mdDownloadWrap"), lock.home_meter, msg(LABELS.home_meter));
+    setOverlay(g("tab-summary"), lock.adv_summary, msg(LABELS.adv_summary));
+    setOverlay(g("tab-advance"), lock.adv_program, msg(LABELS.adv_program));
+    setOverlay(g("userRequestContainer"), lock.home_reasons, msg(LABELS.home_reasons));
+    document.querySelectorAll(".mdSwA").forEach(function (e) { e.classList.toggle("mdLocked", !!lock.home_data); });
+    document.querySelectorAll(".mdSwB").forEach(function (e) { e.classList.toggle("mdLocked", !!lock.home_meter); });
+    var b4 = g("btn-tab-4"), b5 = g("btn-tab-5");
+    if (b4) b4.classList.toggle("maintLockedBtn", !!lock.adv_summary);
+    if (b5) b5.classList.toggle("maintLockedBtn", !!lock.adv_program);
+    document.querySelectorAll('button[onclick="loadReasons(true)"]').forEach(function (e) { e.classList.toggle("maintLockedBtn", !!lock.home_reasons); });
+    if (!loggedIn()) return;
+    // Move the user away from a locked page (if the other page is open)
+    try {
+      if (typeof MD !== "undefined" && accessNow() !== "advanced") {
+        if (lock.home_data && !lock.home_meter && !MD.active()) MD.toggle();
+        else if (lock.home_meter && !lock.home_data && MD.active()) MD.toggle();
+      }
+      if (typeof CURRENT_ACTIVE_TAB !== "undefined" && tabLocked(CURRENT_ACTIVE_TAB)) switchTab(CURRENT_ACTIVE_TAB);
+    } catch (e) {}
+  }
+  function addLine(parent, text, style) {
+    var d = document.createElement("div");
+    d.style.cssText = style || "margin-top:8px;";
+    d.textContent = text;
+    parent.appendChild(d);
+  }
+  function fillNotify(rel) {
+    var body = g("notifyBody");
+    if (!body) return;
+    body.textContent = "";
+    var card = document.createElement("div");
+    card.style.cssText = "background:#fff3cd; border:2px solid #f0ad4e; color:#7a4b00; border-radius:10px; padding:14px; font-size:14px;";
+    addLine(card, "\uD83D\uDEE0\uFE0F Server maintenance in progress", "font-weight:bold; font-size:16px;");
+    addLine(card, "Locked now: " + names(rel), "margin-top:10px; font-weight:bold;");
+    if (cached.m.endsAt) addLine(card, "Expected to finish by: " + fmtEnd(cached.m.endsAt), "margin-top:8px; font-weight:bold;");
+    if (NOTE) addLine(card, NOTE);
+    addLine(card, "Other sections keep working. Entries waiting to sync stay on this phone and are sent afterwards.");
+    if (cached.m.updatedAt) addLine(card, "Started: " + new Date(cached.m.updatedAt).toLocaleString(), "margin-top:8px; font-size:12px; opacity:.8;");
+    body.appendChild(card);
+  }
+  function toast(text) {
+    var t = g("maintToast");
+    if (!t) { t = document.createElement("div"); t.id = "maintToast"; t.className = "maintToast"; document.body.appendChild(t); }
+    t.textContent = text; t.style.display = "block";
+    clearTimeout(t._h); t._h = setTimeout(function () { t.style.display = "none"; }, 7000);
+  }
+  function noticeId() { return cached && cached.m ? String(cached.m.updatedAt || "") : ""; }
+  function markSeen() { try { localStorage.setItem(SEEN_KEY, noticeId()); } catch (e) {} var d = document.querySelector("#btn-tab-6 .maintDot"); if (d) d.style.display = "none"; }
+  function render() {
+    var rel = activeItems(), li = loggedIn();
+    // Login page: a small in-flow note inside the login card
+    var ln = g("maintLoginNote");
+    if (ln) {
+      if (!li && rel.length) {
+        ln.textContent = "\uD83D\uDEE0\uFE0F Server maintenance: " + names(rel) + " is locked" + (cached.m.endsAt ? " until about " + fmtEnd(cached.m.endsAt) : "") + ".";
+        ln.style.display = "block";
+      } else ln.style.display = "none";
+    }
+    // Notifications tab: exists only while maintenance is ON
+    var b6 = g("btn-tab-6");
+    if (b6) b6.style.display = (li && rel.length) ? "" : "none";
+    if (li && rel.length) {
+      fillNotify(rel);
+      var fresh = noticeId() !== localStorage.getItem(SEEN_KEY);
+      var dot = document.querySelector("#btn-tab-6 .maintDot");
+      if (dot) dot.style.display = (fresh && CURRENT_ACTIVE_TAB !== 6) ? "block" : "none";
+      if (fresh && toastedId !== noticeId() && CURRENT_ACTIVE_TAB !== 6) { toastedId = noticeId(); toast("\uD83D\uDEE0\uFE0F Server maintenance: " + names(rel) + " is locked. Tap \uD83D\uDD14 for details."); }
+      if (CURRENT_ACTIVE_TAB === 6) markSeen();
+    } else if (li && typeof CURRENT_ACTIVE_TAB !== "undefined" && CURRENT_ACTIVE_TAB === 6) {
+      switchTab(getDefaultTabIndex());
+    }
+    // Unlock exactly at the finish time even when the phone is offline
+    clearTimeout(expiryTimer);
+    if (rel.length && cached.m.endsAt) expiryTimer = setTimeout(render, Math.max(1000, cached.m.endsAt - nowMs() + 500));
+    apply();
+  }
+  function check(force) {
+    if (!force && Date.now() - lastCheck < 60000) return;
+    if (!navigator.onLine) return;
+    lastCheck = Date.now();
+    fetch(USER_MANAGEMENT_URL + "?action=getMaintenance&_t=" + Date.now())
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.status === "success" && d.maintenance) {
+          cached = { m: d.maintenance, t: Date.now(), skew: d.serverNow ? d.serverNow - Date.now() : 0 };
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify(cached)); } catch (e) {}
+          render();
+        }
+      }).catch(function () {});
+  }
+  function wrap(name, fn) {
+    var o = window[name];
+    if (typeof o !== "function") return;
+    window[name] = function () { return fn.call(this, o, arguments); };
+  }
+  // Pages and background work of a locked area are switched off
+  wrap("switchTab", function (o, a) {
+    if (tabLocked(a[0])) { var alt = firstOpenTab(); if (alt) a[0] = alt; }
+    if (a[0] === 6 && !activeItems().length) a[0] = getDefaultTabIndex();
+    check(false);
+    var r = o.apply(this, a);
+    if (a[0] === 6) markSeen();
+    return r;
+  });
+  wrap("showApp", function (o, a) { var r = o.apply(this, a); try { render(); } catch (e) {} return r; });
+  wrap("fetchUserLiveSheetData", function (o, a) { return L().home_data ? Promise.resolve() : o.apply(this, a); });
+  wrap("sendDataMismatchRequest", function (o, a) {
+    if (L().home_data) { if (!a[0]) alert(msg(LABELS.home_data)); return; }
+    return o.apply(this, a);
+  });
+  wrap("syncQueue", function (o, a) { return L().home_data ? Promise.resolve() : o.apply(this, a); });
+  wrap("autoSyncIfNeeded", function (o, a) { if (L().home_data) return; return o.apply(this, a); });
+  wrap("submitForm", function (o, a) { if (L().home_data) { alert(msg(LABELS.home_data)); return; } return o.apply(this, a); });
+  wrap("loadReasons", function (o, a) { if (L().home_reasons) { if (a[0]) alert(msg(LABELS.home_reasons)); return Promise.resolve(); } return o.apply(this, a); });
+  wrap("autoRefreshReasons", function (o, a) { if (L().home_reasons) return; return o.apply(this, a); });
+  if (typeof MD !== "undefined" && MD && typeof MD.toggle === "function") {
+    var origToggle = MD.toggle;
+    MD.toggle = function () {
+      var toMeter = !MD.active();
+      if (toMeter && L().home_meter) { alert(msg(LABELS.home_meter)); return; }
+      if (!toMeter && L().home_data) { alert(msg(LABELS.home_data)); return; }
+      return origToggle.apply(this, arguments);
+    };
+  }
+  cached = safeJSONParse(localStorage.getItem(CACHE_KEY), null);
+  render(); check(true);
+  setTimeout(apply, 100);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { render(); check(false); } });
+  setInterval(function () { if (document.visibilityState === "visible") check(false); }, 3 * 60 * 1000);
+  window.maintCheck = check;
+  window.maintRender = render;
 })();
 </script>
 </body>  
