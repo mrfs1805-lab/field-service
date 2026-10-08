@@ -421,7 +421,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
             <input id="password" type="password" placeholder="Password">  
             <span onclick="togglePasswordVisibility('password')" style="position: absolute; right: 12px; top: 15px; cursor: pointer; user-select: none; font-size: 15px;">👁️</span>
         </div>
-        <span class="forgot-link" onclick="toggleForgotPassword(true)">Forgot Password? 🔑</span>
+        <span id="forgotLink" class="forgot-link" style="display:none;" onclick="toggleForgotPassword(true)">Forgot Password? 🔑</span>
         <button onclick="login()">Login</button>  
         <div id="loginStatus"></div>  
     </div>
@@ -4836,7 +4836,7 @@ const MD = (function () {
 // Server maintenance: selected areas are locked (only for users whose access includes them) and the
 // notice lives in its own Notifications tab, which appears only while maintenance is ON.
 (function () {
-  var CACHE_KEY = "MAINT_CACHE", SEEN_KEY = "MAINT_SEEN", lastCheck = 0, cached = null, NOTE = "", expiryTimer = null, toastedId = "";
+  var CACHE_KEY = "MAINT_CACHE", SEEN_KEY = "MAINT_SEEN", lastCheck = 0, cached = null, NOTE = "", expiryTimer = null, toastedId = "", forgotOpen = false;
   var LABELS = { home_data: "Data Entry", home_reasons: "Reasons", home_meter: "Meter & Docket Management", adv_summary: "Monthly Summary", adv_program: "Advance Programme" };
   var TAB_IDS = { 1: "tab-data-enter", 2: "tab-settings", 3: "tab-download", 4: "tab-summary", 5: "tab-advance" };
   window.MAINT_LOCK = {};
@@ -4975,6 +4975,9 @@ const MD = (function () {
     } else if (li && typeof CURRENT_ACTIVE_TAB !== "undefined" && CURRENT_ACTIVE_TAB === 6) {
       switchTab(getDefaultTabIndex());
     }
+    // Forgot Password link: hidden unless the Admin has opened it for someone
+    var fl = g("forgotLink");
+    if (fl) fl.style.display = (!li && forgotOpen) ? "" : "none";
     // Unlock exactly at the finish time even when the phone is offline
     clearTimeout(expiryTimer);
     if (rel.length && cached.m.endsAt) expiryTimer = setTimeout(render, Math.max(1000, cached.m.endsAt - nowMs() + 500));
@@ -4988,6 +4991,7 @@ const MD = (function () {
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.status === "success" && d.maintenance) {
+          forgotOpen = !!d.forgotOpen;   // not stored: the link shows only while the Admin has it open
           cached = { m: d.maintenance, t: Date.now(), skew: d.serverNow ? d.serverNow - Date.now() : 0 };
           try { localStorage.setItem(CACHE_KEY, JSON.stringify(cached)); } catch (e) {}
           render();
@@ -5032,7 +5036,11 @@ const MD = (function () {
   render(); check(true);
   setTimeout(apply, 100);
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { render(); check(false); } });
-  setInterval(function () { if (document.visibilityState === "visible") check(false); }, 3 * 60 * 1000);
+  // Login page: look every minute (so the Forgot Password link appears soon after the Admin opens it); in the app: every 3 minutes
+  setInterval(function () {
+    if (document.visibilityState !== "visible") return;
+    if (!loggedIn()) check(true); else if (Date.now() - lastCheck >= 170000) check(false);
+  }, 60 * 1000);
   window.maintCheck = check;
   window.maintRender = render;
 })();
