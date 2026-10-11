@@ -397,6 +397,8 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 .mdSwitch span.on{background:#007bff; color:#fff;}
 .mdSwitch{position:relative; z-index:60;}
 #btn-tab-6{position:relative;}
+html.appLockPending #appLockOverlay{display:flex !important;}
+html.appLockPending body > *:not(#appLockOverlay){visibility:hidden !important;}
 .maintDot{position:absolute; top:2px; right:2px; width:9px; height:9px; border-radius:50%; background:#dc3545; display:none;}
 .maintToast{position:fixed; left:50%; bottom:80px; transform:translateX(-50%); width:88%; max-width:420px; box-sizing:border-box; background:#fff3cd; border:2px solid #f0ad4e; color:#7a4b00; font-size:13px; font-weight:bold; padding:10px 12px; border-radius:10px; text-align:center; z-index:10000; display:none;}
 .mdSwitch span.mdLocked{opacity:.5;}
@@ -407,8 +409,22 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 .maintLockBox{background:#fff3cd; border:2px solid #f0ad4e; color:#7a4b00; font-weight:bold; font-size:14px; padding:14px; border-radius:10px; text-align:center; max-width:320px;}
 .mdFixed{font-weight:bold; background:#f0f0f0; color:#222;}
 </style>  
+<script>
+// App Lock: if this phone has the lock turned on for the saved user, hide the app before it is painted
+try {
+  var __u = JSON.parse(localStorage.getItem("currentUser") || "null");
+  if (__u && __u.username && localStorage.getItem("APPLOCK_CRED_" + String(__u.username).toLowerCase())) document.documentElement.classList.add("appLockPending");
+} catch (e) {}
+</script>
 </head>  
-<body>  
+<body><div id="appLockOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:100000; background:#1f2330; color:#fff; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; box-sizing:border-box;">
+  <div style="font-size:56px;">&#128274;</div>
+  <h2 style="margin:10px 0 4px 0; color:#fff;">App Locked</h2>
+  <div id="appLockMsg" style="font-size:14px; opacity:.85; margin-bottom:18px; min-height:20px;">Use your fingerprint, face or screen lock to continue.</div>
+  <button id="appLockUnlockBtn" onclick="AppLock.unlock()" style="max-width:320px; width:100%; background:#6f42c1; color:#fff; border:0; padding:14px; border-radius:10px; font-size:16px; font-weight:bold;">Unlock &#128275;</button>
+  <button id="appLockGiveUpBtn" onclick="AppLock.giveUp()" style="margin-top:14px; background:transparent; color:#adb5bd; border:0; text-decoration:underline; font-size:13px; width:auto;">Can't unlock? Logout and use password</button>
+</div>
+  
 
 <!-- Login Box -->
 <div class="container" id="loginBox">  
@@ -421,7 +437,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
             <input id="password" type="password" placeholder="Password">  
             <span onclick="togglePasswordVisibility('password')" style="position: absolute; right: 12px; top: 15px; cursor: pointer; user-select: none; font-size: 15px;">👁️</span>
         </div>
-        <span id="forgotLink" class="forgot-link" style="display:none;" onclick="toggleForgotPassword(true)">Forgot Password? 🔑</span>
+        <span id="forgotLink" class="forgot-link" onclick="toggleForgotPassword(true)">Forgot Password? 🔑</span>
         <button onclick="login()">Login</button>  
         <div id="loginStatus"></div>  
     </div>
@@ -433,7 +449,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
         <input id="fp_mobile" placeholder="Mobile Number" inputmode="numeric">
         
         <div id="fpVerifySection">
-            <button onclick="verifyUserMobile()" style="background:#17a2b8;">Verify Account 🔍</button>
+            <button onclick="verifyUserMobile()" style="background:#17a2b8;">Verify &amp; Request Admin Approval 🔍</button>
         </div>
 
         <div id="fpNewPasswordSection" style="display:none;">
@@ -570,7 +586,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
 
     <!-- Settings Tab -->
     <div id="tab-settings" class="tab-content">
-        <h2 style="margin-top: 0; color: #6c757d; cursor:pointer; user-select:none;" onclick="toggleTabVisibilityPanel()">Settings ⚙️</h2>
+        <h2 style="margin-top: 0; color: #6c757d;">Settings ⚙️</h2>
         
         <div id="userRequestContainer" style="background:#e9ecef; padding:12px; border-radius:8px; margin-bottom:15px;">
             <h4 style="margin:0 0 5px 0; color:#007bff;">+ Request New Reason to Admin</h4>
@@ -599,7 +615,12 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
             <button id="changePassBtn" onclick="submitPasswordChange()" style="background:#28a745; margin-top: 8px;">Update Password</button>
         </div>
 
-        <div id="tabVisibilityContainer" style="margin-top:15px; display:none;"></div>
+        <div id="appLockCard" style="margin-top:15px; background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px;">
+            <h4 style="margin:0 0 6px 0; color:#6f42c1;">App Lock &#128274;</h4>
+            <div id="appLockInfo" style="font-size:12px; color:#555; margin-bottom:8px;"></div>
+            <button id="appLockBtn" onclick="AppLock.toggle()" style="background:#6f42c1;">Turn ON App Lock</button>
+        </div>
+
 
         <button class="resetBtn" onclick="resetLocalData()">Reset Local Data 🔄</button>  
         <button class="logoutBtn" onclick="logout()">Logout Account 🚪</button>  
@@ -614,7 +635,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
             <label style="font-size:12px; font-weight:bold; color:#333; display:block; margin-bottom:5px;">Filter Data By:</label>
             
             <div class="filter-grid">
-                <input id="filterAccount" placeholder="Filter by Account Number..." oninput="handleFilterInputClear()">
+                <input id="filterAccount" placeholder="Filter by Account Number..." inputmode="numeric" maxlength="16" autocomplete="off" oninput="this.value = formatAccountNumber(this.value); handleFilterInputClear()">
                 
                 <select id="filterCategory" onchange="handleFilterCategoryChange()">
                     <option value="">All Titles</option>
@@ -670,7 +691,7 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
             <div style="background:#f4f6f9; padding:12px; border-radius:8px; border:1px solid #ccd0d5;">
                 <label style="font-size:12px; font-weight:bold; color:#333; display:block; margin-bottom:5px;">Filter Data By:</label>
                 <div class="filter-grid">
-                    <input id="md_fAccount" placeholder="Filter by Account Number...">
+                    <input id="md_fAccount" placeholder="Filter by Account Number..." inputmode="numeric" maxlength="16" autocomplete="off">
                     <select id="md_fType">
                         <option value="">All Titles</option>
                         <option value="meter">Meter Number Management</option>
@@ -920,6 +941,10 @@ body.adv-review-mode #tab-advance table.adv-prog-table th,body.adv-review-mode #
                 <select id="toSnoSelect"></select>
                 <button class="btn-action" onclick="copyRowData()">📋 Copy</button>
                 <button class="btn-action" onclick="moveRowData()">✂️ Move</button>
+            </div>
+
+            <div class="toolbar-group">
+                <button class="btn-action" style="background:#6d28d9;" onclick="importFromAdvanceProgramme()">📋 Import from Advance Programme</button>
             </div>
 
             <div class="toolbar-group">
@@ -1231,14 +1256,6 @@ function switchTab(tabIndex) {
     if(typeof isTabBlocked === 'function' && isTabBlocked(TAB_INDEX_TO_ID[tabIndex])){
         tabIndex = getDefaultTabIndex();
     }
-    if(typeof getHiddenTabs === 'function' && typeof TAB_VISIBILITY_CONFIG !== 'undefined'){
-        const configurableIds = TAB_VISIBILITY_CONFIG.map(c => c.key);
-        const targetId = TAB_INDEX_TO_ID[tabIndex];
-        if(configurableIds.includes(targetId) && getHiddenTabs().includes(targetId)){
-            tabIndex = 1;
-            if(typeof isTabBlocked === 'function' && isTabBlocked(TAB_INDEX_TO_ID[1])) tabIndex = getDefaultTabIndex();
-        }
-    }
     CURRENT_ACTIVE_TAB = tabIndex;
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -1478,11 +1495,13 @@ function verifyUserMobile() {
             setFpStatus("Verified! Enter new password. ✅", true);
             document.getElementById("fpVerifySection").style.display = "none";
             document.getElementById("fpNewPasswordSection").style.display = "block";
+        } else if(result.status === "pending") {
+            setFpStatus(safeMsg(result.message, "Request sent to your admin. ⏳"), true);
         } else if(result.status === "warning" || result.status === "locked") {
             setFpStatus(safeMsg(result.message, "This is not your account ❌"), false);
             alert(safeMsg(result.message, "This is not your account ❌"));
         } else {
-            setFpStatus("Invalid Username or Mobile Number! ❌", false);
+            setFpStatus(safeMsg(result.message, "Invalid Username or Mobile Number! ❌"), false);
         }
     })
     .catch(() => {
@@ -1705,7 +1724,7 @@ function fetchUserLiveSheetData() {
 
             if (filterAccount || filterReason || filterDate) {
                 FILTERED_SHEET_DATA = LIVE_SHEET_DATA.filter(item => {
-                    let matchAccount = filterAccount ? (item.account || "").toLowerCase().includes(filterAccount) : true;
+                    let matchAccount = filterAccount ? accountSearchMatch(item.account, filterAccount) : true;
                     let matchReason = filterReason ? (item.reason || "").toLowerCase().includes(filterReason) : true;
 
                     let matchDate = true;
@@ -1748,6 +1767,14 @@ function formatAccountNumber(value) {
         }
     }
     return parts.join("/");
+}
+
+// Account search: matches the formatted text OR the digits only (same as the admin panel)
+function accountSearchMatch(account, query) {
+    const acc = String(account || "").toLowerCase();
+    const q = String(query || "").toLowerCase();
+    const qDigits = q.replace(/\D/g, "");
+    return acc.includes(q) || (qDigits !== "" && acc.replace(/\D/g, "").includes(qDigits));
 }
 
 function formatAccountField(e) {
@@ -2447,7 +2474,7 @@ function applyMultiFilter() {
     }
 
     FILTERED_SHEET_DATA = searchable.filter(item => {
-        let matchAccount = filterAccount ? (item.account || "").toLowerCase().includes(filterAccount) : true;
+        let matchAccount = filterAccount ? accountSearchMatch(item.account, filterAccount) : true;
         let matchReason = filterReason ? (item.reason || "").toLowerCase().includes(filterReason) : true;
 
         let matchDate = true;
@@ -3007,6 +3034,83 @@ function updateRowDate(tr){
 }
 function updateRowDatesOnMonthChange(){document.querySelectorAll('#tableBody tr').forEach(updateRowDate)}
 function calcTotal(){let sum=0;document.querySelectorAll('.qty-col').forEach(i=>{const v=parseFloat(i.value);if(!isNaN(v))sum+=v});document.getElementById('totalBills').value=sum>0?sum:''}
+/*
+ * "Import from Advance Programme" button: copies Route Name -> Area and Route No -> Work Order
+ * for every day that has data in the Advance Programme, matched by day number = Serial NO.
+ * Only works when both tabs show the same Month/Year. Qty is never touched (typed by hand).
+ * Rows that already hold a different Area / Work Order are replaced only after the user confirms.
+ */
+function importFromAdvanceProgramme(){
+ const mEl=document.getElementById('advDashMonth'),yEl=document.getElementById('advDashYear');
+ if(!mEl||!yEl)return alert('Advance Programme is not available.');
+ const sMonth=document.getElementById('monthSelect').value,sYear=document.getElementById('yearSelect').value;
+ if(sMonth!==mEl.value||sYear!==yEl.value){
+  return alert(`Month/Year does not match.\nMonthly Summary: ${monthNames[sMonth]} ${sYear}\nAdvance Programme: ${monthNames[mEl.value]} ${yEl.value}\nSelect the same Month and Year in both tabs.`);
+ }
+ const items=[];
+ document.querySelectorAll('#advTableBody tr').forEach(advTr=>{
+  const routeNo=advTr.cells[5]?advTr.cells[5].textContent.trim():'',routeName=advTr.cells[6]?advTr.cells[6].textContent.trim():'';
+  if(routeNo||routeName)items.push({sno:String(advTr.dataset.dateNum).padStart(2,'0'),routeNo,routeName});
+ });
+ if(!items.length)return alert('No Route data found in Advance Programme for this month. Fetch or enter it there first.');
+ let conflicts=0;
+ items.forEach(it=>{
+  const tr=document.querySelector(`#tableBody tr[data-sno="${it.sno}"]`);if(!tr)return;
+  const a=tr.querySelector('.area-col').value.trim(),o=tr.querySelector('.order-col').value.trim();
+  if((a||o)&&(a!==it.routeName||o!==it.routeNo))conflicts++;
+ });
+ let overwrite=true;
+ if(conflicts)overwrite=confirm(`${conflicts} row(s) already have a different Area / Work Order.\nOK = replace them with the Advance Programme data (Qty is kept).\nCancel = fill only the empty rows.`);
+ saveState();
+ let filled=0;
+ items.forEach(it=>{
+  const tr=document.querySelector(`#tableBody tr[data-sno="${it.sno}"]`);if(!tr)return;
+  const areaEl=tr.querySelector('.area-col'),orderEl=tr.querySelector('.order-col');
+  const has=areaEl.value.trim()||orderEl.value.trim();
+  if(has&&!overwrite)return;
+  areaEl.value=it.routeName;orderEl.value=it.routeNo;updateRowDate(tr);filled++;
+ });
+ calcTotal();loadRowDataToToolbar();
+ alert(`${filled} row(s) imported from Advance Programme. Enter the Qty, then press Save.`);
+}
+
+// ----- Unsaved-change guard: Preview / PDF are allowed only after the table has been saved -----
+let sumBaseline='';
+function sumSnapshot(){
+ const rows=[];
+ document.querySelectorAll('#tableBody tr').forEach(tr=>{const i=tr.querySelectorAll('input');rows.push([i[0].value,i[1].value,i[2].value,i[3].value])});
+ return JSON.stringify(rows);
+}
+function sumMarkSaved(snap){sumBaseline=(snap!==undefined)?snap:sumSnapshot()}
+// Pop-up shown when Preview / PDF is pressed with unsaved changes. It has its own Save button;
+// after a successful save the action the user originally pressed is continued automatically.
+function showSaveFirstModal(saveFn,onSaved){
+ let modal=document.getElementById('saveFirstModal');if(modal)modal.remove();
+ modal=document.createElement('div');modal.id='saveFirstModal';
+ modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;';
+ modal.innerHTML=`<div style="background:#fff;border-radius:10px;padding:20px;max-width:340px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.4);text-align:center;font-family:Arial,sans-serif;">
+   <div style="font-size:34px;line-height:1;">⚠️</div>
+   <div style="font-weight:bold;font-size:16px;margin:8px 0 6px;color:#333;">Unsaved changes</div>
+   <div style="font-size:13px;color:#555;margin-bottom:16px;">The table has changes that are not saved yet.<br>Please save first, then you can preview or download the PDF.</div>
+   <div style="display:flex;gap:10px;justify-content:center;">
+     <button id="saveFirstCancelBtn" style="padding:10px 18px;border:none;border-radius:5px;background:#6c757d;color:#fff;font-weight:bold;">✖️ Cancel</button>
+     <button id="saveFirstSaveBtn" style="padding:10px 18px;border:none;border-radius:5px;background:#28a745;color:#fff;font-weight:bold;">☁️ Save</button>
+   </div></div>`;
+ document.body.appendChild(modal);
+ document.getElementById('saveFirstCancelBtn').onclick=function(){modal.remove()};
+ document.getElementById('saveFirstSaveBtn').onclick=async function(){
+  this.disabled=true;this.textContent='Saving...';
+  let ok=false;
+  try{ok=await saveFn()}catch(e){ok=false}
+  modal.remove();
+  if(ok&&typeof onSaved==='function')onSaved();
+ };
+}
+function sumRequireSave(retryFn){
+ if(sumSnapshot()!==sumBaseline){showSaveFirstModal(saveDataToGoogleSheet,retryFn);return true}
+ return false;
+}
+
 function clearSelectedRow(){
  const sno=document.getElementById('fromSnoSelect').value,tr=document.querySelector(`#tableBody tr[data-sno="${sno}"]`);if(!tr)return;saveState();
  tr.querySelector('.area-col').value='';tr.querySelector('.order-col').value='';tr.querySelector('.qty-col').value='';tr.querySelector('.date-col').value='';
@@ -3345,6 +3449,7 @@ async function buildSummaryExportCanvas(){
 }
 
 async function downloadSummaryPDF(){
+ if(sumRequireSave(downloadSummaryPDF))return;
  showLoading(true);
  try{
   if(!window.jspdf || typeof window.jspdf.jsPDF!=='function'){
@@ -3379,6 +3484,7 @@ async function downloadSummaryPDF(){
 }
 
 async function previewSummaryPDF(){
+ if(sumRequireSave(previewSummaryPDF))return;
  showLoading(true);
  try{
   const {canvas}=await buildSummaryExportCanvas();
@@ -3417,14 +3523,15 @@ function showPdfPreviewModal(imgData, onDownload){
 }
 async function saveDataToGoogleSheet(){
  const raName=document.getElementById('raName').value.trim();if(!raName){alert('Please enter the Revenue Assistant Name!');document.getElementById('raName').focus();return}
- showLoading(true);const tableData=[];
+ showLoading(true);const savedSnap=sumSnapshot();const tableData=[];
  document.querySelectorAll('#tableBody tr').forEach(tr=>{const i=tr.querySelectorAll('input');tableData.push({sno:tr.getAttribute('data-sno'),date:i[0].value,area:i[1].value,order:i[2].value,qty:i[3].value})});
  const loginUser=getLoginUsername();
  const payload={action:"save",raName,loginUser,token:getAuthToken(),monthKey:getMonthKey(),data:{billingPeriod:`${document.getElementById('periodFrom').value} - ${document.getElementById('periodTo').value}`,contractNo:document.getElementById('contractNo').value,totalQty:document.getElementById('totalBills').value,tableData}};
  try{
   const response=await fetch(SUMMARY_WEB_APP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}),result=await response.json();showLoading(false);
-  if(result.status==='success'){if(loginUser)localStorage.setItem('RA_NAME_'+loginUser.toLowerCase(),raName);lockRaName();alert(`Data for ${raName} saved successfully to Google Sheets!`)}else alert('Error: '+safeMsg(result.message,'Failed to save data.'));
+  if(result.status==='success'){sumMarkSaved(savedSnap);if(loginUser)localStorage.setItem('RA_NAME_'+loginUser.toLowerCase(),raName);lockRaName();alert(`Data for ${raName} saved successfully to Google Sheets!`);return true}else alert('Error: '+safeMsg(result.message,'Failed to save data.'));
  }catch(err){showLoading(false);alert('Error saving data: '+err.message)}
+ return false;
 }
 
 async function fetchDataFromGoogleSheet(){
@@ -3439,12 +3546,13 @@ async function fetchDataFromGoogleSheet(){
    if(result.data.contractNo)document.getElementById('contractNo').value=result.data.contractNo;
    document.querySelectorAll('#tableBody tr').forEach((tr,index)=>{const i=tr.querySelectorAll('input');if(result.data.tableData&&result.data.tableData[index]){i[0].value=result.data.tableData[index].date||'';i[1].value=result.data.tableData[index].area||'';i[2].value=result.data.tableData[index].order||'';i[3].value=result.data.tableData[index].qty||''}else{i[0].value='';i[1].value='';i[2].value='';i[3].value=''}});
    if(result.data.totalQty)document.getElementById('totalBills').value=result.data.totalQty;else calcTotal();
-   loadRowDataToToolbar();alert(`Data for ${raName} (${monthKey}) retrieved successfully!`);
+   sumMarkSaved();loadRowDataToToolbar();alert(`Data for ${raName} (${monthKey}) retrieved successfully!`);
   }
  }catch(err){showLoading(false);alert('Error retrieving data: '+err.message)}
 }
 
 initSelectors();
+sumMarkSaved();
 autoFillRaName();
 fillSummaryArea();
 
@@ -3453,6 +3561,22 @@ const advSCRIPT_URL = "https://script.google.com/macros/s/AKfycbwX4TOCHjOtIHIUiB
 
 const advMonthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const advDayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+// ----- Unsaved-change guard: Preview / PDF are allowed only after the table has been saved -----
+let advBaseline = '';
+function advSnapshot(){
+  const rows = [];
+  document.querySelectorAll('#advTableBody tr').forEach(tr => rows.push(advGetRowData(tr)));
+  return JSON.stringify({ m: advDashMonth.value, y: advDashYear.value, rows: rows });
+}
+function advMarkSaved(snap){ advBaseline = (snap !== undefined) ? snap : advSnapshot(); }
+function advRequireSave(retryFn){
+  if(advSnapshot() !== advBaseline){
+    showSaveFirstModal(function(){ return advSaveData(); }, retryFn);
+    return true;
+  }
+  return false;
+}
 
 let advHistoryStack = [];
 let advHistoryIndex = -1;
@@ -3773,7 +3897,9 @@ async function advDeleteSheetRowByDate(btnElement) {
       const resData = JSON.parse(text);
 
       if (resData.status === "success") {
+        const advWasClean = (advSnapshot() === advBaseline);
         advClearDashboardRow(); // clear on screen only after the sheet really deleted it
+        if(advWasClean) advMarkSaved();   // sheet and screen now agree
         alert(resData.message || "Date entry successfully deleted from Google Sheets!");
       } else {
         alert("Error: " + (resData.message || "Failed to delete data."));
@@ -3920,6 +4046,7 @@ function advApplyAllData(data){
   // Re-check the Monthly Summary toolbar suggestion, since the first check
   // (on page load) ran before this data existed and found nothing.
   if(typeof loadRowDataToToolbar === 'function') loadRowDataToToolbar();
+  advMarkSaved();   // the table now equals the saved data
 }
 
 /*
@@ -3993,6 +4120,7 @@ async function advSaveData(btnElement){
 
   try {
     const data = advCollectAllData();
+    const savedSnap = advSnapshot();
 
     if(!advSCRIPT_URL){
       alert('Google Apps Script URL is not configured correctly!');
@@ -4007,6 +4135,7 @@ async function advSaveData(btnElement){
     });
 
     if(resData.status === "success"){
+      advMarkSaved(savedSnap);
       try{
         const loginUser = advGetLoginUsername();
         if(loginUser && loginUser !== 'Guest'){
@@ -4021,6 +4150,7 @@ async function advSaveData(btnElement){
       const cacheCopy = Object.assign({}, data); delete cacheCopy.token; // never keep the token in the table cache
       advCacheFullData(cacheCopy);
       alert('Data saved successfully to Google Sheets!');
+      return true;
     } else {
       alert('Error: ' + safeMsg(resData.message, 'Failed to save to Google Sheets.'));
     }
@@ -4030,6 +4160,7 @@ async function advSaveData(btnElement){
     advShowLoading(false);
     if(btnElement) btnElement.disabled = false;
   }
+  return false;
 }
 
 async function advFetchData(btnElement){
@@ -4195,6 +4326,7 @@ async function advCopyFromMonth(){
 async function advOnMonthYearChange(){
   advSyncHeader();
   advBuildTable();
+  advMarkSaved();   // a freshly built month is the starting point; saved data (if any) re-marks it below
 
   const loginUser = advGetLoginUsername();
   if(!loginUser || loginUser === 'Guest') return;
@@ -4328,6 +4460,7 @@ async function advBuildExportCanvas(){
 // Preview = the exact A4 page image that the PDF uses, shown in the same
 // modal as the Download tab's Preview (fits the screen, Close / Download PDF).
 async function advPreviewPDF(btnElement){
+  if(advRequireSave(function(){ advPreviewPDF(); })) return;
   if(btnElement) btnElement.disabled = true;
   advShowLoading(true);
   try {
@@ -4343,6 +4476,7 @@ async function advPreviewPDF(btnElement){
 }
 
 async function advDownloadPDF(btnElement){
+  if(advRequireSave(function(){ advDownloadPDF(); })) return;
   if(btnElement) btnElement.disabled = true;
   advShowLoading(true);
 
@@ -4374,18 +4508,6 @@ async function advDownloadPDF(btnElement){
   }
 }
 
-/*
- * Tab Visibility (Settings tab): lets the user hide/show the optional
- * Download / Advance Programme / Monthly Summary tabs from the bottom
- * menu. "Remove" only hides the nav button (and falls back to the Data
- * Enter tab if it was active) — it never deletes any data. "Add" brings
- * it back. State is stored locally per device.
- */
-const TAB_VISIBILITY_CONFIG = [
-  { key: 'tab-advance', btnId: 'btn-tab-5', label: 'Advance Programme 📋' },
-  { key: 'tab-summary', btnId: 'btn-tab-4', label: 'Monthly Summary 📊' }
-];
-
 /* ===== Admin-controlled access =====
  * Admin sets one value per user (Users tab in the admin panel):
  *   basic    -> Home + Download
@@ -4416,34 +4538,14 @@ function getAllowedTabIds(){
 function isTabBlocked(tabId){ return !!tabId && !getAllowedTabIds().includes(tabId); }
 function getDefaultTabIndex(){ return getUserAccess()==='advanced' ? 4 : 1; }
 
-function getHiddenTabs(){
-  try{
-    const raw = localStorage.getItem('HIDDEN_TABS');
-    if(raw === null){
-      // First run on this device: start with only Home + Settings visible
-      // (advanced-only users have nothing else, so show their tabs).
-      if(getUserAccess()==='advanced') return [];
-      return TAB_VISIBILITY_CONFIG.map(c => c.key);
-    }
-    return JSON.parse(raw);
-  }catch(e){
-    return TAB_VISIBILITY_CONFIG.map(c => c.key);
-  }
-}
-
-function saveHiddenTabs(arr){
-  try{ localStorage.setItem('HIDDEN_TABS', JSON.stringify(arr)); }catch(e){}
-}
-
 function applyTabVisibility(){
   // "Request New Reason" box (Settings): only for users who have Home + Download
   const reqBox = document.getElementById('userRequestContainer');
   if(reqBox) reqBox.style.display = (getUserAccess()==='advanced') ? 'none' : '';
-  const localHidden = getHiddenTabs();
+  // Show exactly the tabs the admin granted; hide the rest
   const hidden = [];
   Object.keys(ALL_TAB_BUTTONS).forEach(id => {
-    const isConfigurable = TAB_VISIBILITY_CONFIG.some(c => c.key === id);
-    const off = isTabBlocked(id) || (isConfigurable && localHidden.includes(id));
+    const off = isTabBlocked(id);
     if(off) hidden.push(id);
     const btn = document.getElementById(ALL_TAB_BUTTONS[id]);
     if(btn) btn.style.display = off ? 'none' : '';
@@ -4454,55 +4556,13 @@ function applyTabVisibility(){
   }
 }
 
-function setTabVisibility(tabKey, visible){
-  let hidden = getHiddenTabs();
-  if(visible){
-    hidden = hidden.filter(k => k !== tabKey);
-  } else if(!hidden.includes(tabKey)){
-    hidden.push(tabKey);
-  }
-  saveHiddenTabs(hidden);
-  applyTabVisibility();
-  renderTabVisibilityControls();
-}
+// One-time cleanup of the old per-device hide/show settings (feature removed)
+try{ localStorage.removeItem('HIDDEN_TABS'); localStorage.removeItem('HIDDEN_TABS_FOR'); }catch(e){}
 
-function renderTabVisibilityControls(){
-  const container = document.getElementById('tabVisibilityContainer');
-  if(!container) return;
-  const hidden = getHiddenTabs();
-  container.innerHTML = TAB_VISIBILITY_CONFIG.filter(cfg => !isTabBlocked(cfg.key)).map(cfg => {
-    const isHidden = hidden.includes(cfg.key);
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #e5e7eb;">
-      <div>
-        <div style="font-weight:bold;font-size:13px;color:#333;">${cfg.label}</div>
-        <div style="font-size:11px;color:${isHidden ? '#c53030' : '#28a745'};">${isHidden ? 'Hidden' : 'Visible'}</div>
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button type="button" class="compact-btn" style="background:#28a745;${isHidden ? '' : 'display:none;'}" onclick="setTabVisibility('${cfg.key}', true)">➕ Add</button>
-        <button type="button" class="compact-btn" style="background:#c53030;${isHidden ? 'display:none;' : ''}" onclick="setTabVisibility('${cfg.key}', false)">🗑️ Remove</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function toggleTabVisibilityPanel(){
-  const container = document.getElementById('tabVisibilityContainer');
-  if(!container) return;
-  container.style.display = (container.style.display === 'none') ? 'block' : 'none';
-}
-
-try{
-  const rawHidden = localStorage.getItem('HIDDEN_TABS');
-  if(rawHidden !== null){
-    const parsedHidden = JSON.parse(rawHidden).filter(k => k !== 'tab-download');
-    localStorage.setItem('HIDDEN_TABS', JSON.stringify(parsedHidden));
-  }
-}catch(e){}
-
-renderTabVisibilityControls();
 applyTabVisibility();
 
 advInitSelectors();
+advMarkSaved();
 advAutoFillProfile();
 </script>
 <!-- ===== Meter / Docket module (isolated: everything lives inside the MD object) ===== -->
@@ -4618,6 +4678,7 @@ const MD = (function () {
     }));
     $('md_account').addEventListener('input', updateAccount);
     $('md_eAccount').addEventListener('input', function () { this.value = fmt(this.value); });
+    $('md_fAccount').addEventListener('input', function () { this.value = fmt(this.value); });
     ['md_meterNo', 'md_docketNo', 'md_eValue'].forEach(id => $(id).addEventListener('input', function () { this.value = this.value.replace(/\D/g, ''); }));
   }
 
@@ -4784,7 +4845,8 @@ const MD = (function () {
   function applyFilter() {
     if (!ready) return;
     const acc = $('md_fAccount').value.trim().toLowerCase(), type = $('md_fType').value, date = $('md_fDate').value;
-    FILTERED = LIVE.filter(l => (!acc || String(l.account).toLowerCase().includes(acc)) && (!type || l.type === type) && (acc || !date || l.entryDate === date));
+    const accDigits = acc.replace(/\D/g, '');
+    FILTERED = LIVE.filter(l => (!acc || String(l.account).toLowerCase().includes(acc) || (accDigits && String(l.account).replace(/\D/g, '').includes(accDigits))) && (!type || l.type === type) && (acc || !date || l.entryDate === date));
     $('md_dlCount').innerText = FILTERED.length + ' Records';
     $('md_dlBody').innerHTML = FILTERED.length ? [...FILTERED].reverse().map(l => '<tr><td>' + esc(l.dataId) + '</td><td>' + esc(l.account) + '</td><td>' + esc(l.value) + (l.type === 'docket' ? '<br><small>from ' + esc(showDate(l.changeDate)) + '</small>' : '') + '</td><td>' + esc(showDate(l.entryDate)) + '</td></tr>').join('')
       : '<tr><td colspan="4" style="text-align:center;">No Data Found</td></tr>';
@@ -4836,7 +4898,7 @@ const MD = (function () {
 // Server maintenance: selected areas are locked (only for users whose access includes them) and the
 // notice lives in its own Notifications tab, which appears only while maintenance is ON.
 (function () {
-  var CACHE_KEY = "MAINT_CACHE", SEEN_KEY = "MAINT_SEEN", lastCheck = 0, cached = null, NOTE = "", expiryTimer = null, toastedId = "", forgotOpen = false;
+  var CACHE_KEY = "MAINT_CACHE", SEEN_KEY = "MAINT_SEEN", lastCheck = 0, cached = null, NOTE = "", expiryTimer = null, toastedId = "";
   var LABELS = { home_data: "Data Entry", home_reasons: "Reasons", home_meter: "Meter & Docket Management", adv_summary: "Monthly Summary", adv_program: "Advance Programme" };
   var TAB_IDS = { 1: "tab-data-enter", 2: "tab-settings", 3: "tab-download", 4: "tab-summary", 5: "tab-advance" };
   window.MAINT_LOCK = {};
@@ -4975,9 +5037,6 @@ const MD = (function () {
     } else if (li && typeof CURRENT_ACTIVE_TAB !== "undefined" && CURRENT_ACTIVE_TAB === 6) {
       switchTab(getDefaultTabIndex());
     }
-    // Forgot Password link: hidden unless the Admin has opened it for someone
-    var fl = g("forgotLink");
-    if (fl) fl.style.display = (!li && forgotOpen) ? "" : "none";
     // Unlock exactly at the finish time even when the phone is offline
     clearTimeout(expiryTimer);
     if (rel.length && cached.m.endsAt) expiryTimer = setTimeout(render, Math.max(1000, cached.m.endsAt - nowMs() + 500));
@@ -4991,7 +5050,6 @@ const MD = (function () {
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.status === "success" && d.maintenance) {
-          forgotOpen = !!d.forgotOpen;   // not stored: the link shows only while the Admin has it open
           cached = { m: d.maintenance, t: Date.now(), skew: d.serverNow ? d.serverNow - Date.now() : 0 };
           try { localStorage.setItem(CACHE_KEY, JSON.stringify(cached)); } catch (e) {}
           render();
@@ -5036,13 +5094,136 @@ const MD = (function () {
   render(); check(true);
   setTimeout(apply, 100);
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { render(); check(false); } });
-  // Login page: look every minute (so the Forgot Password link appears soon after the Admin opens it); in the app: every 3 minutes
-  setInterval(function () {
-    if (document.visibilityState !== "visible") return;
-    if (!loggedIn()) check(true); else if (Date.now() - lastCheck >= 170000) check(false);
-  }, 60 * 1000);
+  setInterval(function () { if (document.visibilityState === "visible") check(false); }, 3 * 60 * 1000);
   window.maintCheck = check;
   window.maintRender = render;
+})();
+</script>
+<script>
+// App Lock: fingerprint / face / screen lock (WebAuthn) in front of the app on THIS phone.
+// It is a lock on the phone only (nothing is sent to the server); the server-side rules stay as they are.
+(function () {
+  var IDLE_MS = 2 * 60 * 1000, hiddenAt = 0, busy = false, root = document.documentElement;
+  function uname() { var u = safeJSONParse(localStorage.getItem("currentUser"), null); return u && u.username ? String(u.username).toLowerCase() : ""; }
+  function credKey(u) { return "APPLOCK_CRED_" + u; }
+  function credId() { var u = uname(); return u ? localStorage.getItem(credKey(u)) : null; }
+  function isLocked() { return root.classList.contains("appLockPending"); }
+  function msg(t) { var m = document.getElementById("appLockMsg"); if (m) m.textContent = t; }
+  function toB64(buf) {
+    var b = new Uint8Array(buf), s = "";
+    for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function fromB64(str) {
+    str = str.replace(/-/g, "+").replace(/_/g, "/");
+    while (str.length % 4) str += "=";
+    var s = atob(str), b = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+    return b;
+  }
+  function secureOk() { return !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && navigator.credentials.get); }
+  async function platformOk() {
+    if (!secureOk()) return false;
+    try { return !!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; }
+  }
+  async function reason() {
+    if (!secureOk()) return "App Lock needs the secure web address (https://). It does not work when the page is opened as a downloaded file.";
+    if (/^[0-9.]+$/.test(location.hostname) || location.hostname.indexOf(":") !== -1) return "App Lock does not work when the page is opened by an IP number. Open the app from its normal web address.";
+    if (!(await platformOk())) return "Set up a screen lock, fingerprint or face unlock on this phone first, then come back here.";
+    return "";
+  }
+  // true only when the phone confirms that the person was verified (fingerprint / face / screen lock)
+  async function verify(idStr) {
+    var res = await navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [{ type: "public-key", id: fromB64(idStr), transports: ["internal"] }],
+      userVerification: "required", timeout: 60000 } });
+    if (!res) return false;
+    var ad = new Uint8Array(res.response.authenticatorData);
+    return ad.length > 32 && (ad[32] & 4) === 4;   // the "user verified" flag
+  }
+  async function register(u) {
+    var cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: "Sierra Engineering" },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: u, displayName: u },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },
+      attestation: "none", timeout: 60000 } });
+    return toB64(cred.rawId);
+  }
+  function lock() {
+    if (!credId() || isLocked()) return;
+    root.classList.add("appLockPending");
+    msg("Use your fingerprint, face or screen lock to continue.");
+    unlock();
+  }
+  async function unlock() {
+    if (busy) return;
+    var id = credId();
+    if (!id) { root.classList.remove("appLockPending"); return; }
+    busy = true; msg("Verifying...");
+    try {
+      if (await verify(id)) { root.classList.remove("appLockPending"); hiddenAt = 0; msg(""); }
+      else msg("Not verified. Tap Unlock to try again.");
+    } catch (e) { msg("Not verified. Tap Unlock to try again."); }
+    busy = false;
+  }
+  // The phone cannot unlock (new fingerprint set, passkey removed ...): the saved login is removed and the lock turned off
+  function giveUp() {
+    if (!confirm("Logout and turn App Lock off for this account? You will sign in again with your password.")) return;
+    var u = uname();
+    if (u) localStorage.removeItem(credKey(u));
+    root.classList.remove("appLockPending");
+    logout();
+  }
+  async function refreshUi() {
+    var info = document.getElementById("appLockInfo"), btn = document.getElementById("appLockBtn");
+    if (!info || !btn) return;
+    if (credId()) {
+      info.textContent = "ON: the app asks for your fingerprint, face or screen lock when you open it, and after you have been away for 2 minutes.";
+      btn.textContent = "Turn OFF App Lock"; btn.disabled = false;
+      return;
+    }
+    var why = await reason();
+    if (why) { info.textContent = why; btn.textContent = "App Lock not available"; btn.disabled = true; }
+    else { info.textContent = "OFF: turn it on to protect the app with your fingerprint, face or screen lock."; btn.textContent = "Turn ON App Lock"; btn.disabled = false; }
+  }
+  async function toggle() {
+    var u = uname();
+    if (!u || busy) return;
+    busy = true;
+    try {
+      var id = credId();
+      if (id) {
+        // turning the lock OFF needs the same verification, so a stranger holding the phone cannot do it
+        var okOff = false;
+        try { okOff = await verify(id); } catch (e2) { okOff = false; }
+        if (okOff) { localStorage.removeItem(credKey(u)); alert("App Lock is OFF."); }
+        else alert("Not verified. App Lock stays ON.");
+      } else {
+        var why = await reason();
+        if (why) alert(why);
+        else { localStorage.setItem(credKey(u), await register(u)); alert("App Lock is ON."); }
+      }
+    } catch (e) {
+      alert(e && e.name === "NotAllowedError" ? "Cancelled. Nothing was changed."
+          : (e && e.name === "SecurityError" ? "App Lock cannot be used from this web address. Open the app from its normal https:// address."
+          : "Could not use the phone's lock. Nothing was changed."));
+    }
+    busy = false;
+    refreshUi();
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return; }
+    if (hiddenAt && Date.now() - hiddenAt >= IDLE_MS) lock();
+    hiddenAt = 0;
+  });
+  var baseShowApp = window.showApp;
+  if (typeof baseShowApp === "function") window.showApp = function () { var r = baseShowApp.apply(this, arguments); try { refreshUi(); } catch (e) {} return r; };
+  window.AppLock = { toggle: toggle, unlock: unlock, giveUp: giveUp, refreshUi: refreshUi, lock: lock };
+  if (isLocked()) unlock(); else lock();
+  refreshUi();
 })();
 </script>
 </body>  
