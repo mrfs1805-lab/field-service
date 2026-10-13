@@ -365,6 +365,7 @@ button:disabled {
 #tab-advance .adv-info-line{margin:5px 0;font-size:9pt}
 #tab-advance .adv-field-row{display:flex;align-items:baseline;margin:5px 0;font-size:9pt;gap:5px;max-width:100%}
 #tab-advance .adv-field-row .adv-label{white-space:nowrap;min-width:150px;font-size:9pt}
+#tab-advance .adv-emp-toggle{width:auto !important;padding:6px 12px !important;margin:4px 0 0 !important;font-size:13px !important;background:#475569 !important;color:#fff !important;border:none !important;border-radius:6px !important;cursor:pointer}
 #tab-advance .adv-field-row .adv-value-display{flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 3px;font-weight:bold;font-size:9pt}
 #tab-advance table.adv-prog-table{width:100%;min-width:560px;border-collapse:collapse;margin-top:14px;font-size:8pt}
 #tab-advance table.adv-prog-table th,#tab-advance table.adv-prog-table td{border:1px solid #000;padding:3px 4px;text-align:center;font-size:8pt}
@@ -778,7 +779,8 @@ try {
         <div class="adv-row">
           <div class="adv-field">
             <label>Emp No</label>
-            <input type="text" id="advDashEmpNo" oninput="advProfileTouched=true;advSyncHeader()">
+            <input type="password" id="advDashEmpNo" autocomplete="off" oninput="advProfileTouched=true;advSyncHeader()">
+            <button type="button" id="advEmpToggle" class="adv-emp-toggle" onclick="advToggleEmpNo()">👁 Show Emp No</button>
           </div>
         </div>
 
@@ -1082,6 +1084,70 @@ try {
 </div>
 
 <script> 
+// Mobile-only app: any other browser mode (desktop computer, tablet, or a phone set to "Desktop site") shows a notice instead of the app.
+(function(){
+  var ua = navigator.userAgent || '';
+  var isPhone = /Mobi|Android|iPhone|iPod/i.test(ua) && !/iPad|Tablet|Macintosh|Windows|X11/i.test(ua);
+  var wide = Math.min(screen.width, screen.height) >= 600 || window.innerWidth > 1000;   // tablet / desktop screen or a wide "desktop site" window
+  if(isPhone && !wide) return;
+  function showNotice(){
+    var d = document.createElement('div');
+    d.id = 'mobileOnlyNotice';
+    d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#1e1e24;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:1.5;';
+    d.innerHTML = '<div><div style="font-size:48px;margin-bottom:12px;">📱</div><b>Mobile phone only</b><br>This app works only on a mobile phone. Please open it on your phone.</div>';
+    (document.body || document.documentElement).appendChild(d);
+    if(document.body) document.body.style.overflow = 'hidden';
+  }
+  if(document.body) showNotice(); else document.addEventListener('DOMContentLoaded', showNotice);
+})();
+function getAllowedTabIds(){
+  const a = getUserAccess();
+  let ids = ['tab-settings','tab-notify'];
+  if(a==='basic'    || a==='all') ids = ids.concat(ACCESS_GROUPS.basic);
+  if(a==='advanced' || a==='all') ids = ids.concat(ACCESS_GROUPS.advanced);
+  return ids;
+}
+function isTabBlocked(tabId){ return !!tabId && !getAllowedTabIds().includes(tabId); }
+function getDefaultTabIndex(){ return getUserAccess()==='advanced' ? 4 : 1; }
+
+function applyTabVisibility(){
+  // "Request New Reason" box (Settings): only for users who have Home + Download
+  const reqBox = document.getElementById('userRequestContainer');
+  if(reqBox) reqBox.style.display = (getUserAccess()==='advanced') ? 'none' : '';
+  // Show exactly the tabs the admin granted; hide the rest
+  const hidden = [];
+  Object.keys(ALL_TAB_BUTTONS).forEach(id => {
+    const off = isTabBlocked(id);
+    if(off) hidden.push(id);
+    const btn = document.getElementById(ALL_TAB_BUTTONS[id]);
+    if(btn) btn.style.display = off ? 'none' : '';
+  });
+  const activeContent = document.querySelector('.tab-content.active');
+  if(activeContent && hidden.includes(activeContent.id) && typeof switchTab === 'function'){
+    switchTab(getDefaultTabIndex());
+  }
+}
+
+/* ===== Admin-controlled access =====
+ * Admin sets one value per user (Users tab in the admin panel):
+ *   basic    -> Home + Download
+ *   advanced -> Monthly Summary + Advance Programme
+ *   all      -> everything
+ * Settings is always available. The value comes from the server at login (data.access). */
+const DEFAULT_ACCESS = 'basic';   // used when the admin has not set anything for this user
+const ACCESS_GROUPS = {
+  basic:    ['tab-data-enter','tab-download'],
+  advanced: ['tab-summary','tab-advance']
+};
+const ALL_TAB_BUTTONS = {
+  'tab-data-enter':'btn-tab-1', 'tab-download':'btn-tab-3',
+  'tab-advance':'btn-tab-5',    'tab-summary':'btn-tab-4'
+};
+function getUserAccess(){
+  const u = safeJSONParse(localStorage.getItem('currentUser'), null);
+  const a = String((u && u.access) || '').toLowerCase();
+  return (a==='basic' || a==='advanced' || a==='all') ? a : DEFAULT_ACCESS;
+}
 const DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
 const ADMIN_DATA_URL = "https://script.google.com/macros/s/AKfycbzOgv3HYwrtATk0y1S7z4k0WDHfz3xNJjP78YY3f9fxbVM09zwAOO15snc7rijlyQs47w/exec";
 const REASONS_URL = "https://script.google.com/macros/s/AKfycbxjbbD_m7lu9bZoGyerWKOJAnSvqTXdcVk9vJbGLFPV8T5PulXN6EF8hKD01tVQu2ZDuw/exec";
@@ -2514,6 +2580,7 @@ function handleFilterInputClear() {
 
 function downloadFilteredPDF() {
     if (FILTERED_SHEET_DATA.length === 0) { alert("No data available to download! ❌"); return; }
+    if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') { alert("PDF library did not load. Please check your internet connection."); return; }
     let user = safeJSONParse(localStorage.getItem("currentUser"), null);
     let username = user ? user.username : "user";
     const { jsPDF } = window.jspdf;
@@ -2858,6 +2925,7 @@ function submitForm(){
 
 function downloadPDF() {
     if (SUBMITTED_LOG.length === 0) { alert("No data available! ❌"); return; }
+    if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') { alert("PDF library did not load. Please check your internet connection."); return; }
     let user = safeJSONParse(localStorage.getItem("currentUser"), null);
     let username = user ? user.username : "user";
     const { jsPDF } = window.jspdf;
@@ -3608,6 +3676,17 @@ function advRedo(){
   }
 }
 
+// Route Nos are always stored as unique numbers in ascending order: 302,303,305,312,323
+function advSortRouteNos(text){
+  const out = [];
+  String(text == null ? '' : text).split(',').forEach(t => {
+    const x = t.replace(/\s+/g, '');
+    if(x && out.indexOf(x) === -1) out.push(x);
+  });
+  out.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  return out.join(',');
+}
+
 function advRestoreState(jsonState){
   if(!jsonState) return;
   const rowsData = JSON.parse(jsonState);
@@ -3618,11 +3697,33 @@ function advRestoreState(jsonState){
       tr.cells[2].textContent = d.noDays;
       tr.cells[3].textContent = d.planned;
       tr.cells[4].textContent = d.cycle;
-      tr.cells[5].textContent = d.routeNo;
+      tr.cells[5].textContent = advSortRouteNos(d.routeNo);
       tr.cells[6].textContent = d.routeName;
     }
   });
   advLoadSelectedRow();
+}
+
+// "Copy From" is always the month before the dashboard month (automatic, not editable).
+// e.g. Dashboard Oct 2026 -> Copy From Sep 2026; Dashboard Jan 2027 -> Copy From Dec 2026.
+function advSyncCopyFromToDashboard(){
+  const dm = document.getElementById('advDashMonth'), dy = document.getElementById('advDashYear');
+  const cms = document.getElementById('advCopyMonth'), cys = document.getElementById('advCopyYear');
+  if(!dm || !dy || !cms || !cys || dm.value === '' || dy.value === '') return;
+  const m = parseInt(dm.value, 10), y = parseInt(dy.value, 10);
+  const prevM = (m + 11) % 12;
+  const prevY = (m === 0) ? y - 1 : y;
+  cms.value = String(prevM);
+  if(cys.querySelector('option[value="' + prevY + '"]')){
+    cys.value = String(prevY);
+  } else {
+    const o = document.createElement('option');
+    o.value = String(prevY); o.textContent = String(prevY);
+    cys.insertBefore(o, cys.firstChild);
+    cys.value = String(prevY);
+  }
+  cms.disabled = true;
+  cys.disabled = true;
 }
 
 function advInitSelectors(){
@@ -3665,15 +3766,29 @@ function advInitSelectors(){
     }
   }
 
+  advSyncCopyFromToDashboard();
   advSyncHeader();
   advBuildTable();
+}
+
+// Employee Number privacy: hidden on screen by default (safe for screen recordings).
+// Only the Show/Hide button reveals it. The PDF export always includes the real number.
+let advEmpRevealed = false;
+function advEmpMask(v){ return (advEmpRevealed || !v) ? (v || '') : '••••••'; }
+function advToggleEmpNo(){
+  advEmpRevealed = !advEmpRevealed;
+  const inp = document.getElementById('advDashEmpNo');
+  const btn = document.getElementById('advEmpToggle');
+  if(inp) inp.type = advEmpRevealed ? 'text' : 'password';
+  if(btn) btn.textContent = advEmpRevealed ? '🙈 Hide Emp No' : '👁 Show Emp No';
+  advSyncHeader();
 }
 
 function advSyncHeader(){
   document.getElementById('advSheetScheme').textContent = document.getElementById('advDashScheme').value;
   document.getElementById('advSheetReaderName').textContent = document.getElementById('advDashReaderName').value;
   document.getElementById('advSheetReaderInitial').textContent = document.getElementById('advDashReaderInitial').value;
-  document.getElementById('advSheetEmpNo').textContent = document.getElementById('advDashEmpNo').value;
+  document.getElementById('advSheetEmpNo').textContent = advEmpMask(document.getElementById('advDashEmpNo').value);
 
   const mIndex = document.getElementById('advDashMonth').value;
   const year = document.getElementById('advDashYear').value;
@@ -3835,7 +3950,7 @@ function advApplyDashboardToRow(){
   row.cells[2].textContent = d.noDays;
   row.cells[3].textContent = d.planned;
   row.cells[4].textContent = d.cycle;
-  row.cells[5].textContent = d.routeNo;
+  row.cells[5].textContent = advSortRouteNos(d.routeNo);
   row.cells[6].textContent = d.routeName;
   advSaveState();
 
@@ -4256,6 +4371,343 @@ function advBuildTable(){
  * never gets applied to the wrong month.
  */
 /*
+ * Copy as Template - day shifting.
+ * A route read on source date D with "No Days" N is read again N days later, so in the target
+ * month it lands on date (D + N). Example (October -> November): Oct 3 + 30 = Nov 2,
+ * Oct 3 + 29 = Nov 1, Oct 3 + 31 = Nov 3. The dialog lists every row with a 29 / 30 / 31 choice,
+ * shows where each row will land, and "Set all" applies one value to every row at once.
+ * Rows that would land outside the target month are marked and are not copied.
+ * When two or more rows land on the SAME target date (a route only partly done on one day and
+ * finished on the next), they are merged into one row: Reading Planned is added up, Route No
+ * values are joined with a comma, and the Route Name / Cycle / No Days of the EARLIEST source
+ * date are kept.
+ */
+function advShowCopyPlanner(sourceRows, sm, sy, tm, ty){
+  const OPTIONS = [29, 30, 31];
+  const mShort = i => advMonthNames[i].substring(0, 3);
+  const pad2 = n => String(n).padStart(2, '0');
+  const targetDays = new Date(ty, tm + 1, 0).getDate();
+  const clean = v => String(v == null ? '' : v).trim();
+  const splitList = s => {
+    const out = [];
+    clean(s).split(',').forEach(t => { const x = t.trim(); if(x && out.indexOf(x) === -1) out.push(x); });
+    return out;
+  };
+
+  // A "part" is either the original source row (home, the first box) or a piece split off it (copy).
+  // Each box has its own Route No text and, for split boxes, its own Planned.
+  // - Route Nos: a number may be typed in more than one box (e.g. 302 in both halves).
+  //   Only numbers that exist in the source row are accepted.
+  // - Planned: each split box's Planned is taken out of the source row's total, so the
+  //   first box shows the remainder automatically.
+  const parts = [];
+  sourceRows.forEach((r, i) => {
+    const has = [r.noDays, r.planned, r.cycle, r.routeNo, r.routeName].some(v => clean(v) !== '');
+    if(!has) return;
+    const own = parseInt(r.noDays, 10);
+    parts.push({
+      src: i + 1,
+      own: OPTIONS.indexOf(own) !== -1 ? own : 30,   // the No Days saved in the source month
+      n: 30,                                         // every row starts at 30 days
+      srcPlanned: clean(r.planned),                  // Planned of the whole source row
+      planned: '',                                   // Planned typed into a split box
+      pool: splitList(r.routeNo),                    // every Route No of the source row
+      typed: clean(r.routeNo),                       // Route No text in this box
+      routeNos: [], effPlanned: '', warn: [],
+      routeName: clean(r.routeName),
+      cycle: clean(r.cycle),
+      copy: false
+    });
+  });
+  if(!parts.length){ alert('No route data found to copy.'); return; }
+
+  // Removes spaces. When the text grows (typing, not deleting), a comma is added after each
+  // 3-digit Route No that is not yet followed by a digit or a comma.
+  function formatRouteText(raw, prev){
+    let v = String(raw).replace(/\s+/g, '');
+    if(v.length > String(prev).length) v = v.replace(/(^|,)(\d{3})(?=$|[^\d,])/g, '$1$2,');
+    return v;
+  }
+
+  // Works out what each box holds: its Route Nos, and the Planned it finally carries.
+  function assign(){
+    parts.forEach(p => {
+      const nos = [], w = [];
+      splitList(p.typed).forEach(t => {
+        if(p.pool.indexOf(t) === -1) w.push(t + ' (not in this row)');
+        else nos.push(t);
+      });
+      p.routeNos = nos;
+      p.warn = w;
+    });
+    parts.forEach(p => {
+      if(p.copy){ p.effPlanned = p.planned; return; }
+      const total = Number(p.srcPlanned);
+      if(p.srcPlanned === '' || isNaN(total)){ p.effPlanned = p.srcPlanned; return; }
+      let taken = 0;
+      parts.forEach(q => { if(q.copy && q.src === p.src && q.planned !== '') taken += Number(q.planned) || 0; });
+      const left = total - taken;
+      p.effPlanned = String(left);
+      if(left < 0) p.warn.push('split Planned is more than ' + total);
+    });
+    // Route Nos of the source row that are not in any box yet
+    parts.forEach(p => {
+      if(p.copy) return;
+      const missing = p.pool.filter(t => !parts.some(q => q.src === p.src && q.routeNos.indexOf(t) !== -1));
+      if(missing.length) p.warn.push('not in any box: ' + missing.join(','));
+    });
+  }
+
+  // Only the No Days choice decides the landing day. A box with no Route Nos is pending.
+  function landingOf(p){
+    if(!p.routeNos.length) return { ok: false, pending: true };
+    const dt = new Date(sy, sm, p.src + p.n);
+    if(dt.getMonth() !== tm || dt.getFullYear() !== ty) return { ok: false };
+    return { ok: true, day: dt.getDate() };
+  }
+  // Groups parts by the day they land on. Parts on the same day are merged.
+  function plan(){
+    assign();
+    const land = parts.map(landingOf);
+    const groups = {};
+    land.forEach((L, idx) => { if(L.ok) (groups[L.day] = groups[L.day] || []).push(idx); });
+    Object.keys(groups).forEach(d => groups[d].sort((a, b) => (parts[a].src - parts[b].src) || (a - b)));
+    return { land, groups };
+  }
+  // Planned is added up, Route No values are joined (no repeats, no spaces), earliest Route Name kept.
+  function mergeParts(list){
+    let sum = 0, anyNum = false, firstText = '';
+    const nos = [];
+    list.forEach(p => {
+      if(p.effPlanned !== ''){
+        const num = Number(p.effPlanned);
+        if(!isNaN(num)){ sum += num; anyNum = true; } else if(!firstText){ firstText = p.effPlanned; }
+      }
+      p.routeNos.forEach(t => { if(nos.indexOf(t) === -1) nos.push(t); });
+    });
+    // Route Nos are shown in ascending order (302,303,305,312,323)
+    nos.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const first = key => { for(let i = 0; i < list.length; i++){ if(list[i][key]) return list[i][key]; } return ''; };
+    return {
+      noDays: String(list[0].n),
+      planned: anyNum ? String(sum) : firstText,
+      cycle: first('cycle'),
+      routeNo: nos.join(','),
+      routeName: first('routeName')
+    };
+  }
+
+  let modal = document.getElementById('advCopyPlannerModal');
+  if(modal) modal.remove();
+  modal = document.createElement('div');
+  modal.id = 'advCopyPlannerModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100000;display:flex;align-items:center;justify-content:center;padding:12px;';
+  document.body.appendChild(modal);
+
+  // The app's global CSS makes every input / select / button 100% wide with big padding, so this
+  // dialog carries its own scoped rules (with !important) to keep the layout readable on a phone.
+  const css = [
+    '#advCopyPlannerModal, #advCopyPlannerModal *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif !important;font-style:normal !important;}',
+    '#advCopyPlannerModal .cp-box{background:#fff;border-radius:12px;padding:14px;width:100%;max-width:460px;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.4);}',
+    '#advCopyPlannerModal .cp-title{font-weight:bold;font-size:16px;color:#222;}',
+    '#advCopyPlannerModal .cp-note{font-size:12px;color:#555;line-height:1.4;margin:4px 0 10px;}',
+    '#advCopyPlannerModal .cp-label{font-size:12px;font-weight:bold;color:#333;margin-bottom:4px;}',
+    '#advCopyPlannerModal .cp-setall{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}',
+    '#advCopyPlannerModal button{width:100% !important;margin:0 !important;padding:9px 4px !important;border:none !important;border-radius:6px !important;color:#fff !important;font-weight:bold !important;font-size:13px !important;cursor:pointer;}',
+    '#advCopyPlannerModal button.cp-mini{width:auto !important;padding:5px 9px !important;font-size:12px !important;background:#475569 !important;}',
+    '#advCopyPlannerModal button.cp-del{background:#c53030 !important;}',
+    '#advCopyPlannerModal .cp-list{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;border-top:2px solid #ccd0d5;}',
+    '#advCopyPlannerModal .cp-row{padding:8px 2px;border-bottom:1px solid #e5e7eb;}',
+    '#advCopyPlannerModal .cp-split{border-left:4px solid #f59e0b;padding-left:8px;background:#fffbeb;}',
+    '#advCopyPlannerModal .cp-head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;}',
+    '#advCopyPlannerModal .cp-date{flex:0 0 auto;font-weight:bold;font-size:14px;color:#111;white-space:nowrap;}',
+    '#advCopyPlannerModal .cp-tag{flex:0 0 auto;font-size:11px !important;background:#fde68a;color:#7c2d12 !important;border-radius:4px;padding:1px 5px;font-weight:bold;}',
+    '#advCopyPlannerModal .cp-route{flex:1 1 auto;min-width:0;font-size:13px;color:#444;word-break:break-word;overflow-wrap:anywhere;}',
+    '#advCopyPlannerModal .cp-ctl{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;margin-top:6px;}',
+    '#advCopyPlannerModal select,#advCopyPlannerModal .cp-planned,#advCopyPlannerModal .cp-routeno{width:100% !important;margin:0 !important;padding:7px 6px !important;font-size:14px !important;border:1px solid #9aa5b1 !important;border-radius:6px !important;background:#fff !important;color:#222 !important;}',
+    '#advCopyPlannerModal .cp-ro{background:#f1f5f9 !important;color:#334155 !important;}',
+    '#advCopyPlannerModal .cp-planned{text-align:center;}',
+    '#advCopyPlannerModal .cp-lbl{display:block;font-size:11px;color:#666;margin-top:6px;}',
+    '#advCopyPlannerModal .cp-routeno{margin-top:2px !important;}',
+    '#advCopyPlannerModal .cp-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;}',
+    '#advCopyPlannerModal .cp-target{flex:1 1 auto;min-width:0;font-weight:bold;font-size:13px;line-height:1.3;}',
+    '#advCopyPlannerModal .cp-acts{flex:0 0 auto;display:flex;gap:6px;}',
+    '#advCopyPlannerModal .cp-summary{font-size:13px;font-weight:bold;margin:10px 0 8px;line-height:1.3;}',
+    '#advCopyPlannerModal .cp-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}'
+  ].join('');
+
+  function rowHtml(p, idx){
+    const daysSel = '<select data-idx="' + idx + '" title="No Days">' +
+      OPTIONS.map(o => '<option value="' + o + '"' + (o === p.n ? ' selected' : '') + '>' + o + ' days</option>').join('') +
+      '</select>';
+    const plannedBox = p.copy
+      ? '<input type="text" inputmode="numeric" class="cp-planned" data-planned="' + idx + '" placeholder="Planned" title="Number of Reading Planned for this split" value="' + advEscapeHtml(p.planned) + '">'
+      : '<input type="text" class="cp-planned cp-ro" readonly data-homeplanned="' + idx + '" placeholder="Planned" title="Row total minus the Planned of the split boxes" value="">';
+    return '<div class="cp-row' + (p.copy ? ' cp-split' : '') + '">' +
+      '<div class="cp-head"><span class="cp-date">' + pad2(p.src) + ' ' + mShort(sm) + '</span>' +
+        (p.copy ? '<span class="cp-tag">SPLIT</span>' : '') +
+        '<span class="cp-route">' + advEscapeHtml(p.routeName || '(no name)') + '</span></div>' +
+      '<div class="cp-ctl">' + daysSel + plannedBox + '</div>' +
+      '<label class="cp-lbl">' + (p.copy ? 'Route No for this split – type comma separated' : 'Route No – first box (type to change)') + '</label>' +
+      '<input type="text" class="cp-routeno" data-typed="' + idx + '" placeholder="e.g. 302,312" value="' + advEscapeHtml(p.typed) + '">' +
+      '<div class="cp-foot"><span class="cp-target" data-target="' + idx + '"></span>' +
+        '<span class="cp-acts"><button type="button" class="cp-mini" data-split="' + idx + '">✂ Split</button>' +
+        (p.copy ? '<button type="button" class="cp-mini cp-del" data-remove="' + idx + '">✖ Remove</button>' : '') +
+        '</span></div>' +
+    '</div>';
+  }
+
+  function refresh(){
+    const { land, groups } = plan();
+    let placed = 0, merged = 0, pending = 0, outside = 0;
+    Object.keys(groups).forEach(d => { merged += groups[d].length - 1; });
+    parts.forEach((p, idx) => {
+      const plannedView = modal.querySelector('[data-homeplanned="' + idx + '"]');
+      if(plannedView) plannedView.value = p.effPlanned;
+      const el = modal.querySelector('[data-target="' + idx + '"]');
+      if(!el) return;
+      const L = land[idx];
+      const warnTxt = p.warn.length ? ' · ⚠ ' + p.warn.join(' · ') : '';
+      if(!L.ok){
+        if(L.pending){ pending++; el.textContent = '⏳ Type Route Nos in this box to place it'; }
+        else { outside++; el.textContent = '✖ outside ' + advMonthNames[tm] + ' – change No Days (29/30/31)'; }
+        el.style.color = '#c53030';
+        if(p.warn.length) el.textContent += warnTxt;
+        return;
+      }
+      placed++;
+      const group = groups[L.day];
+      if(group.length > 1){
+        const others = [...new Set(group.filter(j => j !== idx).map(j => pad2(parts[j].src) + ' ' + mShort(sm)))];
+        el.textContent = '→ ' + pad2(L.day) + ' ' + mShort(tm) + ' (merged with ' + others.join(', ') + ')';
+        el.style.color = '#b45309';
+      } else {
+        el.textContent = '→ ' + pad2(L.day) + ' ' + mShort(tm);
+        el.style.color = '#1a7f37';
+      }
+      if(p.warn.length){ el.textContent += warnTxt; el.style.color = '#c53030'; }
+    });
+    const sum = modal.querySelector('#advCopyPlannerSummary');
+    sum.textContent = placed + ' of ' + parts.length + ' will be placed in ' + advMonthNames[tm] +
+      (merged ? ' · ' + merged + ' merged' : '') +
+      (pending ? ' · ' + pending + ' waiting for Route Nos' : '') +
+      (outside ? ' · ' + outside + ' outside the month' : '');
+    sum.style.color = (pending || outside) ? '#b45309' : '#1a7f37';
+  }
+
+  function bind(){
+    modal.querySelectorAll('select[data-idx]').forEach(sel => {
+      sel.onchange = function(){ parts[parseInt(this.getAttribute('data-idx'), 10)].n = parseInt(this.value, 10); refresh(); };
+    });
+    modal.querySelectorAll('input[data-planned]').forEach(inp => {
+      inp.oninput = function(){
+        this.value = this.value.replace(/\D/g, '');   // readings planned = whole number
+        parts[parseInt(this.getAttribute('data-planned'), 10)].planned = this.value;
+        refresh();
+      };
+    });
+    // Route No boxes: no spaces, and a comma is added by itself after every 3-digit number while typing
+    modal.querySelectorAll('input[data-typed]').forEach(inp => {
+      let prev = inp.value;
+      inp.oninput = function(){
+        const raw = this.value, pos = this.selectionStart;
+        const v = formatRouteText(raw, prev);
+        if(v !== raw){
+          this.value = v;
+          const np = (pos === raw.length) ? v.length : Math.max(0, Math.min(v.length, pos + (v.length - raw.length)));
+          try { this.setSelectionRange(np, np); } catch(e) {}
+        }
+        prev = v;
+        parts[parseInt(this.getAttribute('data-typed'), 10)].typed = v;
+        refresh();
+      };
+    });
+    // Split: adds an empty box right below this row. Type the Route Nos and Planned for it.
+    modal.querySelectorAll('button[data-split]').forEach(btn => {
+      btn.onclick = function(){
+        const idx = parseInt(this.getAttribute('data-split'), 10), p = parts[idx];
+        parts.splice(idx + 1, 0, { src: p.src, own: p.own, n: 30, srcPlanned: p.srcPlanned, planned: '',
+                                   pool: p.pool, typed: '', routeNos: [], effPlanned: '', warn: [],
+                                   routeName: p.routeName, cycle: p.cycle, copy: true });
+        render(idx + 1);
+      };
+    });
+    // Remove a split box: the row's Planned goes back to the first box automatically
+    modal.querySelectorAll('button[data-remove]').forEach(btn => {
+      btn.onclick = function(){
+        parts.splice(parseInt(this.getAttribute('data-remove'), 10), 1);
+        render();
+      };
+    });
+    modal.querySelectorAll('button[data-all]').forEach(btn => {
+      btn.onclick = function(){
+        const v = this.getAttribute('data-all');
+        parts.forEach(p => { p.n = (v === 'own') ? p.own : parseInt(v, 10); });
+        render();
+      };
+    });
+    modal.querySelector('#advCopyPlannerCancel').onclick = function(){ modal.remove(); };
+    modal.querySelector('#advCopyPlannerApply').onclick = function(){
+      const { land, groups } = plan();
+      const negative = parts.find(p => p.effPlanned !== '' && !isNaN(Number(p.effPlanned)) && Number(p.effPlanned) < 0);
+      if(negative){ alert('Planned of ' + pad2(negative.src) + ' ' + mShort(sm) + ' is less than the Planned of its split boxes. Fix the split Planned first.'); return; }
+      const targetRows = [];
+      for(let d = 1; d <= targetDays; d++) targetRows.push({ noDays: '', planned: '', cycle: '', routeNo: '', routeName: '' });
+      let placed = 0;
+      Object.keys(groups).forEach(day => {
+        const list = groups[day].map(idx => parts[idx]);
+        targetRows[parseInt(day, 10) - 1] = mergeParts(list);
+        placed += list.length;
+      });
+      if(!placed){ alert('Nothing can be placed in ' + advMonthNames[tm] + ' ' + ty + '. Change the No Days (29/30/31) or type Route Nos in a box.'); return; }
+      const left = land.filter(L => !L.ok).length;
+      if(left && !confirm(left + ' box(es) are not placed and will be left out. Continue?')) return;
+      modal.remove();
+      advRestoreState(JSON.stringify(targetRows));
+      advLoadSelectedRow();
+      advSaveState(); // so Undo can revert the template copy
+    };
+  }
+
+  function render(focusIdx){
+    // Re-building the dialog would jump the list back to the top; keep the scroll position
+    const oldList = modal.querySelector('#advCopyPlannerList');
+    const keepTop = oldList ? oldList.scrollTop : 0;
+    modal.innerHTML =
+      '<style>' + css + '</style>' +
+      '<div class="cp-box">' +
+        '<div class="cp-title">Copy ' + advMonthNames[sm] + ' ' + sy + ' &rarr; ' + advMonthNames[tm] + ' ' + ty + '</div>' +
+        '<div class="cp-note">Each row moves forward by its No Days (29, 30 or 31 only; starts at 30). Use <b>Split</b> to add a box below a row and type the Route Nos and Planned for it. The same Route No can be typed in two boxes. The row\'s Planned goes down by the split Planned automatically. Rows landing on the same date are merged. The current ' + advMonthNames[tm] + ' table will be replaced.</div>' +
+        '<div class="cp-label">Set all rows to:</div>' +
+        '<div class="cp-setall">' +
+          '<button type="button" data-all="own" title="Use the No Days saved in the source month" style="background:#6d28d9 !important;">Source</button>' +
+          OPTIONS.map(o => '<button type="button" data-all="' + o + '" style="background:#007bff !important;">' + o + '</button>').join('') +
+        '</div>' +
+        '<div class="cp-list" id="advCopyPlannerList">' + parts.map(rowHtml).join('') + '</div>' +
+        '<div class="cp-summary" id="advCopyPlannerSummary"></div>' +
+        '<div class="cp-actions">' +
+          '<button type="button" id="advCopyPlannerCancel" style="background:#6c757d !important;">Cancel</button>' +
+          '<button type="button" id="advCopyPlannerApply" style="background:#28a745 !important;">Apply</button>' +
+        '</div>' +
+      '</div>';
+    bind();
+    refresh();
+    const list = modal.querySelector('#advCopyPlannerList');
+    if(list) list.scrollTop = keepTop;
+    if(focusIdx != null){
+      const box = modal.querySelector('[data-typed="' + focusIdx + '"]');
+      if(box){ box.scrollIntoView({ block: 'center' }); box.focus(); }
+    }
+  }
+
+  render();
+}
+
+function advEscapeHtml(v){
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/*
  * "📋 Copy as Template": lets the user pull another month's saved
  * day-by-day data (Route No/Route Name/Cycle/Planned) into the CURRENTLY
  * selected month's table, so they don't have to retype everything from
@@ -4264,6 +4716,7 @@ function advBuildTable(){
  * only the table rows are replaced.
  */
 async function advCopyFromMonth(){
+  advSyncCopyFromToDashboard();
   const loginUser = advGetLoginUsername();
   if(!loginUser || loginUser === 'Guest'){
     alert('Please log in first.');
@@ -4279,8 +4732,6 @@ async function advCopyFromMonth(){
   }
 
   const sourceLabel = `${advMonthNames[sourceMonth]} ${sourceYear}`;
-  const targetLabel = `${advMonthNames[targetMonth]} ${targetYear}`;
-  if(!confirm(`Copy data from ${sourceLabel} to ${targetLabel}?`)) return;
 
   advShowLoading(true);
   try{
@@ -4312,9 +4763,9 @@ async function advCopyFromMonth(){
       return;
     }
 
-    advRestoreState(JSON.stringify(sourceData.rows));
-    advLoadSelectedRow();
-    advSaveState(); // so Undo can revert the template copy
+    // Rows do not simply keep their day number: each row moves forward by its own No Days (29/30/31)
+    advShowCopyPlanner(sourceData.rows, parseInt(sourceMonth, 10), parseInt(sourceYear, 10),
+                       parseInt(targetMonth, 10), parseInt(targetYear, 10));
 
   }catch(err){
     alert('Copy failed: ' + (err && err.message ? err.message : err));
@@ -4324,6 +4775,7 @@ async function advCopyFromMonth(){
 }
 
 async function advOnMonthYearChange(){
+  advSyncCopyFromToDashboard();
   advSyncHeader();
   advBuildTable();
   advMarkSaved();   // a freshly built month is the starting point; saved data (if any) re-marks it below
@@ -4398,6 +4850,8 @@ async function advBuildExportCanvas(){
   try{
     exportPage = source.cloneNode(true);
     exportPage.removeAttribute('id');
+    const empCell = exportPage.querySelector('#advSheetEmpNo');
+    if(empCell) empCell.textContent = document.getElementById('advDashEmpNo').value;   // real number in the PDF
     exportPage.id = 'advPdfExportPage';
     // Avoid duplicate ids while the clone is briefly in the live DOM.
     exportPage.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
@@ -4508,60 +4962,13 @@ async function advDownloadPDF(btnElement){
   }
 }
 
-/* ===== Admin-controlled access =====
- * Admin sets one value per user (Users tab in the admin panel):
- *   basic    -> Home + Download
- *   advanced -> Monthly Summary + Advance Programme
- *   all      -> everything
- * Settings is always available. The value comes from the server at login (data.access). */
-const DEFAULT_ACCESS = 'basic';   // used when the admin has not set anything for this user
-const ACCESS_GROUPS = {
-  basic:    ['tab-data-enter','tab-download'],
-  advanced: ['tab-summary','tab-advance']
-};
-const ALL_TAB_BUTTONS = {
-  'tab-data-enter':'btn-tab-1', 'tab-download':'btn-tab-3',
-  'tab-advance':'btn-tab-5',    'tab-summary':'btn-tab-4'
-};
-function getUserAccess(){
-  const u = safeJSONParse(localStorage.getItem('currentUser'), null);
-  const a = String((u && u.access) || '').toLowerCase();
-  return (a==='basic' || a==='advanced' || a==='all') ? a : DEFAULT_ACCESS;
-}
-function getAllowedTabIds(){
-  const a = getUserAccess();
-  let ids = ['tab-settings','tab-notify'];
-  if(a==='basic'    || a==='all') ids = ids.concat(ACCESS_GROUPS.basic);
-  if(a==='advanced' || a==='all') ids = ids.concat(ACCESS_GROUPS.advanced);
-  return ids;
-}
-function isTabBlocked(tabId){ return !!tabId && !getAllowedTabIds().includes(tabId); }
-function getDefaultTabIndex(){ return getUserAccess()==='advanced' ? 4 : 1; }
-
-function applyTabVisibility(){
-  // "Request New Reason" box (Settings): only for users who have Home + Download
-  const reqBox = document.getElementById('userRequestContainer');
-  if(reqBox) reqBox.style.display = (getUserAccess()==='advanced') ? 'none' : '';
-  // Show exactly the tabs the admin granted; hide the rest
-  const hidden = [];
-  Object.keys(ALL_TAB_BUTTONS).forEach(id => {
-    const off = isTabBlocked(id);
-    if(off) hidden.push(id);
-    const btn = document.getElementById(ALL_TAB_BUTTONS[id]);
-    if(btn) btn.style.display = off ? 'none' : '';
-  });
-  const activeContent = document.querySelector('.tab-content.active');
-  if(activeContent && hidden.includes(activeContent.id) && typeof switchTab === 'function'){
-    switchTab(getDefaultTabIndex());
-  }
-}
-
 // One-time cleanup of the old per-device hide/show settings (feature removed)
 try{ localStorage.removeItem('HIDDEN_TABS'); localStorage.removeItem('HIDDEN_TABS_FOR'); }catch(e){}
 
 applyTabVisibility();
 
 advInitSelectors();
+document.getElementById('advDashRouteNo').addEventListener('change', function(){ this.value = advSortRouteNos(this.value); });
 advMarkSaved();
 advAutoFillProfile();
 </script>
