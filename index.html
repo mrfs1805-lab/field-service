@@ -440,6 +440,7 @@ try {
         </div>
         <span id="forgotLink" class="forgot-link" onclick="toggleForgotPassword(true)">Forgot Password? 🔑</span>
         <button onclick="login()">Login</button>  
+        <button id="bioLoginBtn" type="button" onclick="bioLogin()" style="display:none; background:#6f42c1;">👆 Login with fingerprint</button>
         <div id="loginStatus"></div>  
     </div>
 
@@ -597,6 +598,12 @@ try {
             <input id="userRequestedNewCategory" placeholder="Type new title/category name..." style="display:none;">
             <input id="userRequestedReason" placeholder="Type new reason here...">
             <button id="sendRequestBtn" class="compact-btn" onclick="submitReasonRequest()" style="background:#6c757d; color:white; margin: 4px 0 0 0;">Send Request ✉️</button>
+        </div>
+
+        <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px;">
+            <h4 style="margin:0 0 6px 0; color:#6f42c1;">Fingerprint Login 👆</h4>
+            <div id="bioInfo" style="font-size:12px; color:#555; margin-bottom:8px;"></div>
+            <button id="bioBtn" type="button" onclick="bioToggle()" style="background:#6f42c1;">Turn ON Fingerprint Login</button>
         </div>
 
         <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px;">
@@ -1488,6 +1495,136 @@ function getDeviceIds(){
     ]);
 }
 
+// ===== Fingerprint login: one password login, then fingerprint only on this phone =====
+// The phone keeps a device-bound fingerprint key (WebAuthn) and the last login token.
+// A fingerprint login still asks the server (resumeSession): account must be Active, the phone
+// must not be blocked, and the token must be valid.
+var BIO_KEY = "BIO_LOGIN_RECORD";   // {username, credId, token}
+function bioB64(buf){ var b = new Uint8Array(buf), s = ""; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function bioFromB64(str){ str = str.replace(/-/g, "+").replace(/_/g, "/"); while (str.length % 4) str += "="; var s = atob(str), b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
+function bioGet(){ try { return JSON.parse(localStorage.getItem(BIO_KEY) || "null"); } catch(e) { return null; } }
+function bioSave(rec){ try { localStorage.setItem(BIO_KEY, JSON.stringify(rec)); } catch(e) {} }
+function bioClear(){ try { localStorage.removeItem(BIO_KEY); } catch(e) {} }
+async function bioPlatformOk(){
+    if (!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && navigator.credentials.get)) return false;
+    try { return !!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch(e) { return false; }
+}
+async function bioVerify(credId){
+    var res = await navigator.credentials.get({ publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ type: "public-key", id: bioFromB64(credId), transports: ["internal"] }],
+        userVerification: "required", timeout: 60000 } });
+    if (!res) return false;
+    var ad = new Uint8Array(res.response.authenticatorData);
+    return ad.length > 32 && (ad[32] & 4) === 4;   // "user verified" flag
+}
+async function bioRegister(username){
+    var cred = await navigator.credentials.create({ publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: { name: "MR Field Service" },
+        user: { id: crypto.getRandomValues(new Uint8Array(16)), name: username, displayName: username },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },
+        attestation: "none", timeout: 60000 } });
+    return bioB64(cred.rawId);
+}
+// Shows the fingerprint button on the login screen when this phone has a fingerprint login
+async function bioRefreshLoginButton(){
+    var btn = document.getElementById("bioLoginBtn"), rec = bioGet(), u = document.getElementById("username");
+    if (!btn) return;
+    if (rec && rec.username && (await bioPlatformOk())) {
+        btn.style.display = "";
+        if (u && !u.value) u.value = rec.username;
+    } else btn.style.display = "none";
+}
+// After a password login: offer to turn fingerprint login on (once), or refresh the saved token
+async function bioOfferAfterLogin(username, token, allowed){
+    try {
+        var rec = bioGet();
+        // Admin has stopped fingerprint login for this account: remove any saved record, offer nothing
+        if (allowed === false) { if (rec && rec.username === username) bioClear(); return; }
+        if (rec && rec.username === username) { rec.token = token; bioSave(rec); return; }
+        if (!(await bioPlatformOk())) return;
+        var q = rec ? "Replace the fingerprint login on this phone with " + username + "?" : "Turn on fingerprint login on this phone? Next time you can log in with your fingerprint only.";
+        if (!confirm(q)) return;
+        var credId = await bioRegister(username);
+        bioSave({ username: username, credId: credId, token: token });
+        alert("Fingerprint login is ON for this phone.");
+        bioRefreshLoginButton(); bioRefreshSettings();
+    } catch(e) { /* the password login still works */ }
+}
+async function bioLogin(){
+    var st = document.getElementById("loginStatus"), rec = bioGet();
+    if (!rec) { st.innerText = "Fingerprint login is not set up on this phone. Login with your password first. ❌"; bioRefreshLoginButton(); return; }
+    st.innerText = "Verifying fingerprint... ⏳";
+    var ok = false;
+    try { ok = await bioVerify(rec.credId); } catch(e) { ok = false; }
+    if (!ok) { st.innerText = "Fingerprint not verified. Try again, or login with your password. ❌"; return; }
+    st.innerText = "Checking... ⏳";
+    try {
+        var ids = await getDeviceIds(), model = await getDeviceModel();
+        var res = await fetch(USER_MANAGEMENT_URL, { method: "POST", body: JSON.stringify({
+            action: "resumeSession", username: rec.username, token: rec.token || "",
+            fingerprint: generateDeviceFingerprint(), deviceId: ids[0], fpStrong: ids[1], deviceModel: model }) });
+        var data = await res.json();
+        if (data && data.status === "success") {
+            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || rec.username, role: data.role || "User", loginDate: getLocalDateString(), token: data.token || "", access: String(data.access || "").toLowerCase(), bioAllowed: true }));
+            try { localStorage.setItem("LAST_ACCESS", String(data.access || "").toLowerCase()); } catch(e) {}
+            rec.token = data.token || rec.token; bioSave(rec);
+            showApp();
+            if (typeof autoFillRaName === 'function') autoFillRaName();
+        } else if (data && data.status === "bio_off") {
+            // Admin has stopped fingerprint login for this account: forget it on this phone
+            bioClear();
+            bioRefreshLoginButton(); bioRefreshSettings();
+            st.innerText = safeMsg(data.message, "Fingerprint login is not allowed for this account. Please login with your password. ❌");
+        } else {
+            st.innerText = safeMsg(data && data.message, "Login not allowed ❌");
+        }
+    } catch(e) {
+        st.innerText = "Connection Error - internet is required to log in ⚠️";
+    }
+}
+
+async function bioRefreshSettings(){
+    var info = document.getElementById("bioInfo"), btn = document.getElementById("bioBtn");
+    if (!info || !btn) return;
+    var rec = bioGet(), cur = safeJSONParse(localStorage.getItem("currentUser"), null);
+    if (cur && cur.bioAllowed === false) {
+        info.textContent = "Not allowed by admin for this account. Ask the admin to turn it on.";
+        btn.textContent = "Fingerprint Login not allowed"; btn.disabled = true; return;
+    }
+    if (rec && rec.username) {
+        info.textContent = "ON for " + rec.username + " on this phone: log in with your fingerprint only.";
+        btn.textContent = "Turn OFF Fingerprint Login";
+    } else if (!(await bioPlatformOk())) {
+        info.textContent = "Not available: set up a screen lock or fingerprint on this phone, and open the app from its https:// address.";
+        btn.textContent = "Fingerprint Login not available"; btn.disabled = true; return;
+    } else {
+        info.textContent = "OFF: after one password login, you can turn it on to log in with your fingerprint only.";
+        btn.textContent = "Turn ON Fingerprint Login";
+    }
+    btn.disabled = false;
+}
+async function bioToggle(){
+    var rec = bioGet(), cur = safeJSONParse(localStorage.getItem("currentUser"), null);
+    try {
+        if (rec) {
+            var okOff = false;
+            try { okOff = await bioVerify(rec.credId); } catch(e) { okOff = false; }
+            if (okOff) { bioClear(); alert("Fingerprint login is OFF."); }
+            else alert("Not verified. Fingerprint login stays ON.");
+        } else {
+            if (!cur || !cur.username || !cur.token) { alert("Login with your password first, then turn on Fingerprint Login."); return; }
+            var credId = await bioRegister(cur.username);
+            bioSave({ username: cur.username, credId: credId, token: cur.token });
+            alert("Fingerprint login is ON for this phone.");
+        }
+    } catch(e) { alert("Nothing was changed."); }
+    bioRefreshSettings(); bioRefreshLoginButton();
+}
+document.addEventListener("DOMContentLoaded", function(){ bioRefreshLoginButton(); bioRefreshSettings(); });
+
 function login(){  
     let u = document.getElementById("username").value.trim();  
     let p = document.getElementById("password").value.trim();  
@@ -1512,10 +1649,11 @@ function login(){
 
         if(isSuccess) {   
             let today = getLocalDateString();  
-            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today, token: data.token || "", access: String(data.access || "").toLowerCase() }));
+            localStorage.setItem("currentUser", JSON.stringify({ username: data.username || u, role: data.role || "User", loginDate: today, token: data.token || "", access: String(data.access || "").toLowerCase(), bioAllowed: data.bioAllowed !== false }));
             try { localStorage.setItem("LAST_ACCESS", String(data.access || "").toLowerCase()); } catch(e) {}   
             showApp();  
             if (typeof autoFillRaName === 'function') autoFillRaName();
+            bioOfferAfterLogin(data.username || u, data.token || "", data.bioAllowed);
         } else if(data && data.status === "pending_approval") {
             let baseMsg = safeMsg(data.message, "New device detected. Waiting for Admin approval ⏳");
             document.getElementById("loginStatus").innerHTML = `${escapeHtml(baseMsg)}<br>Contact Admin: <a href="tel:${ADMIN_MOBILE_NUMBER}" style="color:#0b3d91;font-weight:bold;text-decoration:underline;">${ADMIN_MOBILE_NUMBER}</a>`;
