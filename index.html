@@ -417,6 +417,14 @@ try {
   if (__u && __u.username && localStorage.getItem("APPLOCK_CRED_" + String(__u.username).toLowerCase())) document.documentElement.classList.add("appLockPending");
 } catch (e) {}
 </script>
+<style>
+#settingsHead{display:flex; justify-content:space-between; align-items:center; margin:0 0 12px 0;}
+#settingsMenuWrap{position:relative;}
+#settingsMenuBtn{width:auto; margin:0; padding:4px 8px; font-size:30px; line-height:1; background:transparent; color:#000; border:0; box-shadow:none;}
+#settingsMenu{position:absolute; right:0; top:46px; z-index:50; min-width:220px; background:#fff; border:1px solid #ccc; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,.18); padding:6px; display:flex; flex-direction:column; gap:6px;}
+.secTabBtn{width:100%; margin:0; padding:10px 12px; font-size:14px; font-weight:bold; text-align:left; background:#f1f3f5; color:#333; border:1px solid #ddd; border-radius:8px;}
+.secTabBtn.active{background:#000; color:#fff; border-color:#000;}
+</style>
 </head>  
 <body><div id="appLockOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:100000; background:#1f2330; color:#fff; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; box-sizing:border-box;">
   <div style="font-size:56px;">&#128274;</div>
@@ -588,7 +596,17 @@ try {
 
     <!-- Settings Tab -->
     <div id="tab-settings" class="tab-content">
-        <h2 style="margin-top: 0; color: #6c757d;">Settings ⚙️</h2>
+        <div id="settingsHead">
+            <h2 style="margin:0; color: #6c757d;">Settings ⚙️</h2>
+            <div id="settingsMenuWrap">
+                <button type="button" id="settingsMenuBtn" onclick="settingsMenuToggle(event)" aria-label="Settings menu">&#9776;</button>
+                <div id="settingsMenu" style="display:none;">
+                    <button type="button" class="secTabBtn active" id="secTab-pw" onclick="settingsSecTab('pw')">🔑 Change Password</button>
+                    <button type="button" class="secTabBtn" id="secTab-bio" onclick="settingsSecTab('bio')">👆 Fingerprint Login</button>
+                    <button type="button" class="secTabBtn" id="secTab-lock" onclick="settingsSecTab('lock')">🔒 App Lock</button>
+                </div>
+            </div>
+        </div>
         
         <div id="userRequestContainer" style="background:#e9ecef; padding:12px; border-radius:8px; margin-bottom:15px;">
             <h4 style="margin:0 0 5px 0; color:#007bff;">+ Request New Reason to Admin</h4>
@@ -600,12 +618,8 @@ try {
             <button id="sendRequestBtn" class="compact-btn" onclick="submitReasonRequest()" style="background:#6c757d; color:white; margin: 4px 0 0 0;">Send Request ✉️</button>
         </div>
 
-        <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px;">
-            <h4 style="margin:0 0 6px 0; color:#6f42c1;">Fingerprint Login 👆</h4>
-            <div id="bioInfo" style="font-size:12px; color:#555; margin-bottom:8px;"></div>
-            <button id="bioBtn" type="button" onclick="bioToggle()" style="background:#6f42c1;">Turn ON Fingerprint Login</button>
-        </div>
 
+        <div class="secPanel" id="secPanel-pw">
         <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px;">
             <h4 style="margin: 0 0 10px 0; color: #28a745;">Change Password 🔑</h4>
             <div style="position: relative;">
@@ -622,16 +636,31 @@ try {
             </div>
             <button id="changePassBtn" onclick="submitPasswordChange()" style="background:#28a745; margin-top: 8px;">Update Password</button>
         </div>
+        </div>
 
+        <div class="secPanel" id="secPanel-bio" style="display:none;">
+        <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px;">
+            <h4 style="margin:0 0 6px 0; color:#6f42c1;">Fingerprint Login 👆</h4>
+            <div id="bioInfo" style="font-size:12px; color:#555; margin-bottom:8px;"></div>
+            <button id="bioBtn" type="button" onclick="bioToggle()" style="background:#6f42c1;">Turn ON Fingerprint Login</button>
+            <div id="bioPwdBox" style="display:none; margin-top:8px;">
+                <input id="bioPwd" type="password" placeholder="Enter your password to turn ON">
+                <button type="button" onclick="bioEnableWithPassword()" style="background:#6f42c1;">Confirm &amp; Turn ON</button>
+            </div>
+        </div>
+        </div>
+
+        <div class="secPanel" id="secPanel-lock" style="display:none;">
         <div id="appLockCard" style="margin-top:15px; background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:8px;">
             <h4 style="margin:0 0 6px 0; color:#6f42c1;">App Lock &#128274;</h4>
             <div id="appLockInfo" style="font-size:12px; color:#555; margin-bottom:8px;"></div>
             <button id="appLockBtn" onclick="AppLock.toggle()" style="background:#6f42c1;">Turn ON App Lock</button>
         </div>
-
+        </div>
 
         <button class="resetBtn" onclick="resetLocalData()">Reset Local Data 🔄</button>  
-        <button class="logoutBtn" onclick="logout()">Logout Account 🚪</button>  
+        <button class="logoutBtn" onclick="logout()">Logout Account 🚪</button>
+        <div id="appVersion" style="font-size:11px; color:#888; text-align:center; margin-top:6px;">Version 0.4.5</div>
     </div>
 
     <!-- Download Tab -->
@@ -1495,10 +1524,36 @@ function getDeviceIds(){
     ]);
 }
 
+// Settings: show one of the three sections (Fingerprint, App Lock, Change Password)
+function settingsSecTab(key){
+    ["bio", "lock", "pw"].forEach(function(k){
+        var p = document.getElementById("secPanel-" + k), b = document.getElementById("secTab-" + k);
+        if (p) p.style.display = (k === key) ? "" : "none";
+        if (b) b.classList.toggle("active", k === key);
+    });
+    var m = document.getElementById("settingsMenu");
+    if (m) m.style.display = "none";
+}
+function settingsMenuToggle(ev){
+    if (ev) ev.stopPropagation();
+    var m = document.getElementById("settingsMenu");
+    if (m) m.style.display = (m.style.display === "none") ? "flex" : "none";
+}
+document.addEventListener("click", function(ev){
+    var m = document.getElementById("settingsMenu");
+    if (m && m.style.display !== "none" && !ev.target.closest("#settingsMenuWrap")) m.style.display = "none";
+});
 // ===== Fingerprint login: one password login, then fingerprint only on this phone =====
 // The phone keeps a device-bound fingerprint key (WebAuthn) and the last login token.
 // A fingerprint login still asks the server (resumeSession): account must be Active, the phone
 // must not be blocked, and the token must be valid.
+// APP VERSION
+// VERSION RULE (for every update):
+//   Format 0.MINOR.PATCH. PATCH goes up by 1 with every update.
+//   After 0.x.9 comes 0.(x+1).0 (for example 0.4.9 -> 0.5.0).
+//   Every update changes the version in index.html, admin.html and UserManagement.gs together.
+//   Current version: 0.4.5
+var APP_VERSION = "0.4.5";
 var BIO_KEY = "BIO_LOGIN_RECORD";   // {username, credId, token}
 function bioB64(buf){ var b = new Uint8Array(buf), s = ""; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function bioFromB64(str){ str = str.replace(/-/g, "+").replace(/_/g, "/"); while (str.length % 4) str += "="; var s = atob(str), b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
@@ -1539,19 +1594,14 @@ async function bioRefreshLoginButton(){
 }
 // After a password login: offer to turn fingerprint login on (once), or refresh the saved token
 async function bioOfferAfterLogin(username, token, allowed){
+    // Fingerprint login: the admin decides per user (default OFF). Nothing is registered here.
+    // A saved fingerprint login only gets its token refreshed. App Lock is turned on automatically.
     try {
         var rec = bioGet();
-        // Admin has stopped fingerprint login for this account: remove any saved record, offer nothing
-        if (allowed === false) { if (rec && rec.username === username) bioClear(); return; }
-        if (rec && rec.username === username) { rec.token = token; bioSave(rec); return; }
-        if (!(await bioPlatformOk())) return;
-        var q = rec ? "Replace the fingerprint login on this phone with " + username + "?" : "Turn on fingerprint login on this phone? Next time you can log in with your fingerprint only.";
-        if (!confirm(q)) return;
-        var credId = await bioRegister(username);
-        bioSave({ username: username, credId: credId, token: token });
-        alert("Fingerprint login is ON for this phone.");
-        bioRefreshLoginButton(); bioRefreshSettings();
+        if (allowed === false) { if (rec && rec.username === username) bioClear(); }
+        else if (rec && rec.username === username) { rec.token = token; bioSave(rec); }
     } catch(e) { /* the password login still works */ }
+    try { if (window.AppLock && typeof AppLock.autoEnable === "function") AppLock.autoEnable(username); } catch(e) {}
 }
 async function bioLogin(){
     var st = document.getElementById("loginStatus"), rec = bioGet();
@@ -1573,6 +1623,11 @@ async function bioLogin(){
             rec.token = data.token || rec.token; bioSave(rec);
             showApp();
             if (typeof autoFillRaName === 'function') autoFillRaName();
+        } else if (data && data.status === "expired") {
+            // Token no longer valid (password changed, or not approved phone): forget the saved fingerprint login
+            bioClear();
+            bioRefreshLoginButton(); bioRefreshSettings();
+            st.innerText = safeMsg(data.message, "Fingerprint login expired. Please login with your password. ❌");
         } else if (data && data.status === "bio_off") {
             // Admin has stopped fingerprint login for this account: forget it on this phone
             bioClear();
@@ -1586,6 +1641,31 @@ async function bioLogin(){
     }
 }
 
+// Settings: turn ON needs the correct password. The server checks it (same device rules as login).
+async function bioEnableWithPassword(){
+    var cur = safeJSONParse(localStorage.getItem("currentUser"), null);
+    var pf = document.getElementById("bioPwd");
+    var pwd = pf ? pf.value.trim() : "";
+    if (pf) pf.value = "";
+    if (!cur || !cur.username) { alert("Login first, then turn on Fingerprint Login."); return; }
+    if (!pwd) { alert("Enter your password. ❌"); return; }
+    if (!(await bioPlatformOk())) { alert("Fingerprint login is not available on this phone. Set up a screen lock first."); return; }
+    try {
+        var ids = await getDeviceIds(), model = await getDeviceModel();
+        var res = await fetch(USER_MANAGEMENT_URL, { method: "POST", body: JSON.stringify({
+            action: "checkLogin", username: cur.username, password: pwd,
+            fingerprint: generateDeviceFingerprint(), deviceId: ids[0], fpStrong: ids[1], deviceModel: model }) });
+        var data = await res.json();
+        if (!data || data.status !== "success") { alert(safeMsg(data && data.message, "Wrong password. ❌")); return; }
+        if (data.bioAllowed === false) { alert("Fingerprint login is not allowed for this account. Ask the admin."); return; }
+        var credId = await bioRegister(cur.username);
+        bioSave({ username: cur.username, credId: credId, token: data.token || "" });
+        var box = document.getElementById("bioPwdBox"); if (box) box.style.display = "none";
+        alert("Fingerprint login is ON for this phone.");
+    } catch(e) { alert("Nothing was changed."); }
+    bioRefreshSettings(); bioRefreshLoginButton();
+}
+
 async function bioRefreshSettings(){
     var info = document.getElementById("bioInfo"), btn = document.getElementById("bioBtn");
     if (!info || !btn) return;
@@ -1596,12 +1676,13 @@ async function bioRefreshSettings(){
     }
     if (rec && rec.username) {
         info.textContent = "ON for " + rec.username + " on this phone: log in with your fingerprint only.";
+        var bx = document.getElementById("bioPwdBox"); if (bx) bx.style.display = "none";
         btn.textContent = "Turn OFF Fingerprint Login";
     } else if (!(await bioPlatformOk())) {
         info.textContent = "Not available: set up a screen lock or fingerprint on this phone, and open the app from its https:// address.";
         btn.textContent = "Fingerprint Login not available"; btn.disabled = true; return;
     } else {
-        info.textContent = "OFF: after one password login, you can turn it on to log in with your fingerprint only.";
+        info.textContent = "OFF: enter your password to turn it on, then log in with your fingerprint only.";
         btn.textContent = "Turn ON Fingerprint Login";
     }
     btn.disabled = false;
@@ -1615,15 +1696,19 @@ async function bioToggle(){
             if (okOff) { bioClear(); alert("Fingerprint login is OFF."); }
             else alert("Not verified. Fingerprint login stays ON.");
         } else {
-            if (!cur || !cur.username || !cur.token) { alert("Login with your password first, then turn on Fingerprint Login."); return; }
-            var credId = await bioRegister(cur.username);
-            bioSave({ username: cur.username, credId: credId, token: cur.token });
-            alert("Fingerprint login is ON for this phone.");
+            // Turning ON needs the correct password: the box below asks for it
+            if (!cur || !cur.username) { alert("Login first, then turn on Fingerprint Login."); return; }
+            var box = document.getElementById("bioPwdBox");
+            if (box) { box.style.display = ""; var pf = document.getElementById("bioPwd"); if (pf) pf.focus(); }
+            return;
         }
     } catch(e) { alert("Nothing was changed."); }
     bioRefreshSettings(); bioRefreshLoginButton();
 }
-document.addEventListener("DOMContentLoaded", function(){ bioRefreshLoginButton(); bioRefreshSettings(); });
+document.addEventListener("DOMContentLoaded", function(){
+    bioRefreshLoginButton(); bioRefreshSettings();
+    var av = document.getElementById("appVersion"); if (av) av.textContent = "Version " + APP_VERSION;
+});
 
 function login(){  
     let u = document.getElementById("username").value.trim();  
@@ -5766,7 +5851,16 @@ const MD = (function () {
   });
   var baseShowApp = window.showApp;
   if (typeof baseShowApp === "function") window.showApp = function () { var r = baseShowApp.apply(this, arguments); try { refreshUi(); } catch (e) {} return r; };
-  window.AppLock = { toggle: toggle, unlock: unlock, giveUp: giveUp, refreshUi: refreshUi, lock: lock };
+  // Automatic ON after a successful password login: the phone registers its lock for this user.
+  // Silent: no popup, and nothing happens if the phone has no screen lock or the registration is cancelled.
+  async function autoEnable(username) {
+    var u = String(username || "").toLowerCase();
+    if (!u || localStorage.getItem(credKey(u))) return;
+    if (await reason()) return;
+    try { localStorage.setItem(credKey(u), await register(u)); } catch (e) { /* the user can turn it on in Settings */ }
+    refreshUi();
+  }
+  window.AppLock = { toggle: toggle, unlock: unlock, giveUp: giveUp, refreshUi: refreshUi, lock: lock, autoEnable: autoEnable };
   if (isLocked()) unlock(); else lock();
   refreshUi();
 })();
